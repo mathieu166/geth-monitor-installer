@@ -2,8 +2,8 @@
 
 echo "Adding peers to Geth..."
 
-# Define the path to the geth executable
-geth_path="~/vitruveo-protocol/build/bin/geth"
+# Define the path to the geth executable and expand ~ to full path
+geth_path=~/vitruveo-protocol/build/bin/geth
 
 # Define the RPC URL
 rpc_url="http://localhost:8545"
@@ -19,6 +19,15 @@ enodes=(
     "enode://d160f111f6ce54ad171f09787080c74eb151da39fbe2f34cdd52a328a40ba58d33e8a36f166134c1015c4fe6b961921b99151f4c790da6f308714988e0dcf217@51.21.4.232:30304"
     "enode://4043e50067990d79b88f047bd289c0ad66f6e6b86f905c31daabef69ebdbf662d09de5a1e3eca938c2ee5d5a62bfc92d3505fa6c41b3132adc46ac7c4d8c4db7@5.161.49.240:30304"
 )
+
+# Use eval to expand the path
+geth_path=$(eval echo $geth_path)
+
+# Check if the geth binary exists
+if [ ! -f "$geth_path" ]; then
+    echo "Error: geth executable not found at $geth_path"
+    exit 1
+fi
 
 # Loop through each enode and add it as a peer
 for enode in "${enodes[@]}"; do
