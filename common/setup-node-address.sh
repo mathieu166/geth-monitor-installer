@@ -8,3 +8,5 @@ sudo sed -i '/^NODE_ADDRESS=/d' /etc/environment
 
 # Add the new NODE_ADDRESS line
 sudo sh -c "echo 'NODE_ADDRESS=$address' >> /etc/environment"
+
+echo "NODE_ADDRESS is set to: $address"
