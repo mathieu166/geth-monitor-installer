@@ -31,7 +31,7 @@ fi
 
 # Since NODE_ADDRESS was not found in /etc/environment, add it
 echo "Adding NODE_ADDRESS to /etc/environment..."
-echo "NODE_ADDRESS=\"$address\"" | tee -a /etc/environment
+echo "NODE_ADDRESS=\"$address\"" | sudo tee -a /etc/environment
 
 # Export NODE_ADDRESS for the current session
 export NODE_ADDRESS="$address"
