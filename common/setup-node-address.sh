@@ -3,7 +3,7 @@
 echo "Starting the script..."
 
 # Define the file path
-file_path="/home/ubuntu/node/info.txt"
+file_path="~/node/info.txt"
 echo "Looking for info.txt at $file_path..."
 
 # Check if the file exists
