@@ -9,7 +9,7 @@ peer_count=$(curl -s -X POST -H "Content-Type: application/json" --data '{"jsonr
 
 if [ "$peer_count" == "null" ]; then
     echo "Failed to retrieve peer count."
-    return 0
+    exit 0
 fi
 
 echo "Peer count: $peer_count"
@@ -19,7 +19,7 @@ latest_block_number=$(curl -s -X POST --data '{"jsonrpc":"2.0","method":"eth_blo
 
 if [ "$latest_block_number" == "null" ]; then
     echo "Failed to retrieve the latest block number."
-    return 0
+    exit 0
 fi
 
 # Get block details using the latest block number
@@ -27,7 +27,7 @@ block_details=$(curl -s -X POST --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_ge
 
 if [ "$(echo "$block_details" | jq -r '.result')" == "null" ]; then
     echo "Failed to retrieve block details."
-    return 0
+    exit 0
 fi
 
 # Extract the timestamp from the block details
@@ -41,7 +41,7 @@ timestamp_decimal=$(printf "%d" "$((16#$timestamp_hex))")
 
 if [ -z "$timestamp_decimal" ]; then
     echo "Failed to convert timestamp to decimal."
-    return 0
+    exit 0
 fi
 
 echo "Timestamp: $timestamp_decimal"
@@ -58,7 +58,7 @@ key=$(curl -s -X POST --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sign\",\"par
 echo "Key: $key"
 if [ "$key" == "null" ]; then
     echo "Failed to sign the message."
-    return 0
+    exit 0
 fi
 
 # Post the signed message and other data to the external server
@@ -76,5 +76,5 @@ if [ "$http_code" -eq 200 ]; then
 else
     echo "Failed to post data. HTTP status code: $http_code"
     echo "Response body: $response_body"
-    return 0
+    exit 0
 fi
