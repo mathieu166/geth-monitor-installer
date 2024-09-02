@@ -1,0 +1,10 @@
+[Unit]
+Description=Run vitruveo-monitor-agent.service every 15 seconds
+
+[Timer]
+# Time between activations
+OnUnitActiveSec=15s
+Persistent=true
+
+[Install]
+WantedBy=timers.target
