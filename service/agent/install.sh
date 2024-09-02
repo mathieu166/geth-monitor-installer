@@ -23,22 +23,7 @@ NODE_ADDRESS_SCRIPT_URL="https://raw.githubusercontent.com/mathieu166/vitruveo-m
 # Create the directory if it doesn't exist
 mkdir -p "$SERVICE_DIR"
 
-# Step 1: Install Node.js using fnm
-echo "Checking and installing Node.js..."
-if [ -z "$FNM_PATH" ]; then
-    echo "Node.js is not installed. Installing..."
-    curl -fsSL https://fnm.vercel.app/install | bash
-    source ~/.bashrc
-    export PATH=$HOME/.fnm:$PATH
-    eval "$(fnm env)"
-    fnm use --install-if-missing 20
-    node -v
-    npm -v
-else
-    echo "Node.js is already installed."
-fi
-
-# Step 2: Extract public address
+# Extract public address
 echo "Extracting public address..."
 bash <(curl -H 'Cache-Control: no-cache' -s "$NODE_ADDRESS_SCRIPT_URL") && echo "NODE_ADDRESS=$NODE_ADDRESS"
 
