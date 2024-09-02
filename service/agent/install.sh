@@ -31,6 +31,10 @@ bash <(curl -H 'Cache-Control: no-cache' -s "$NODE_ADDRESS_SCRIPT_URL") && echo 
 echo "Downloading agent script..."
 curl -fsSL "$AGENT_SCRIPT_URL" -o "$SERVICE_DIR/agent.sh"
 
+# Replace placeholder in the agent script with the actual NODE_ADDRESS
+echo "Updating agent script with NODE_ADDRESS..."
+sed -i "s/\$NODE_ADDRESS/$NODE_ADDRESS/g" "$SERVICE_DIR/agent.sh"
+
 # Download service and timer files
 echo "Downloading service and timer files..."
 curl -fsSL "$BASE_URL/service/agent/vitruveo-monitor-agent.service" -o "$SERVICE_PATH"

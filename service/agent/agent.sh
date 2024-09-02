@@ -62,19 +62,17 @@ if [ "$key" == "null" ]; then
 fi
 
 # Post the signed message and other data to the external server
-response=$(curl -s -o response.txt -w "%{http_code}" -X POST -H "Content-Type: application/json" \
+response=$(curl -s -w "%{http_code}" -X POST -H "Content-Type: application/json" \
     --data "{\"key\":\"$key\",\"address\":\"$NODE_ADDRESS\",\"timestamp\":\"$timestamp_decimal\",\"peer_count\":\"$peer_count\"}" \
     "$EXTERNAL_URL")
 
 # Capture HTTP status code
 http_code=$(echo "$response" | tail -n1)
-response_body=$(cat response.txt)
 
 # Check HTTP status code and handle errors
 if [ "$http_code" -eq 200 ]; then
     echo "Data posted successfully."
 else
     echo "Failed to post data. HTTP status code: $http_code"
-    echo "Response body: $response_body"
     exit 0
 fi
