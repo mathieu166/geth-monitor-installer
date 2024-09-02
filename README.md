@@ -7,4 +7,7 @@ Once the agent is installed, you will be able to view the metrics on your dashbo
 
 ## Installation steps
 1. Install Node JS
-```curl -fsSL https://fnm.vercel.app/install | bash && source ~/.bashrc && export PATH=$HOME/.fnm:$PATH && eval "$(fnm env)" && fnm use --install-if-missing 20 && node -v && npm -v```
+```shell
+curl -fsSL https://fnm.vercel.app/install | bash && source ~/.bashrc && export PATH=$HOME/.fnm:$PATH && eval "$(fnm env)" && fnm use --install-if-missing 20 && node -v && npm -v
+```
+2. Some other step.
