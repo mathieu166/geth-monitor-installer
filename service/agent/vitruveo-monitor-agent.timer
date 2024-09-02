@@ -3,6 +3,7 @@ Description=Run vitruveo-monitor-agent.service every 15 seconds
 
 [Timer]
 # Time between activations
+OnBootSec=60sec
 OnUnitActiveSec=15s
 Persistent=true
 
