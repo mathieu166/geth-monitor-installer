@@ -1,0 +1,13 @@
+[Unit]
+Description=Vitruveo Monitor Agent
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/node /home/ubuntu/vitruveo-monitor-agent/runner.js
+Restart=always
+
+User=ubuntu
+Group=ubuntu
+
+[Install]
+WantedBy=multi-user.target
