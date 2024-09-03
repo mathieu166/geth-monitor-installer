@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "description": "Vitruveo monitoring agent",
   "main": "service/master-server.js",
-  "scripts": {
-  },
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mathieu166/vitruveo-monitor-agent.git"
@@ -16,8 +15,9 @@
   },
   "homepage": "https://github.com/mathieu166/vitruveo-monitor-agent#readme",
   "dependencies": {
-    "dotenv": "^16.4.5",
     "axios": "^1.7.4",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.2",
     "express": "^4.19.2",
     "pg": "^8.12.0"
   }
