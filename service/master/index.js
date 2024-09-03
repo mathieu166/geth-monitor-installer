@@ -6,8 +6,10 @@ const { ethers } = require('ethers');
 const app = express();
 const PORT = 3003;
 
+// Middleware to parse JSON bodies
 app.use(express.json());
 
+// PostgreSQL connection configuration
 const client = new Client({
 	user: process.env.DB_USER,
 	host: process.env.DB_HOST,
@@ -16,8 +18,10 @@ const client = new Client({
 	port: parseInt(process.env.DB_PORT, 10),
 });
 
+// Connect to PostgreSQL
 client.connect();
 
+// Endpoint to handle the POST request from agent.sh
 app.post('/', async (req, res) => {
 	try {
 		const { key, timestamp, address, peer_count } = req.body;
@@ -26,11 +30,14 @@ app.post('/', async (req, res) => {
 			return res.status(400).json({ error: 'Missing required fields' });
 		}
 
-		// Concatenate the address and timestamp
-		const message = ethers.utils.defaultAbiCoder.encode(['string', 'uint256'], [address, timestamp]);
+		// Concatenate the address and timestamp directly
+		const message = `${address}${timestamp}`;
+
+		// Hash the concatenated message
+		const messageHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(message));
 
 		// Recover the signer address from the signature
-		const signerAddress = ethers.utils.verifyMessage(ethers.utils.arrayify(ethers.utils.keccak256(message)), key);
+		const signerAddress = ethers.utils.verifyMessage(ethers.utils.arrayify(messageHash), key);
 
 		// Verify that the signerAddress matches the provided address
 		if (signerAddress.toLowerCase() !== address.toLowerCase()) {
