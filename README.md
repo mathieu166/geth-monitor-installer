@@ -6,12 +6,8 @@ Initially, only one metric will be communicated: the Peer Count. Over time, addi
 Once the agent is installed, you will be able to view the metrics on your dashboard and customize the behavior of your UptimeRobot URL. For example, you can configure it to trigger alerts based on a Peer Count of zero.
 
 ## Installation steps
-1. Install Node JS - *Safe to run if Node is already installed*
+Run this single command. 
 ```shell
-[ -z "$FNM_PATH" ] && (curl -fsSL https://fnm.vercel.app/install | bash && source ~/.bashrc && export PATH=$HOME/.fnm:$PATH && eval "$(fnm env)" && fnm use --install-if-missing 20 && node -v && npm -v) || echo "Node JS already installed"
+curl -fsSL https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-agent/main/service/agent/install.sh -o /tmp/install.sh && sudo bash /tmp/install.sh && rm /tmp/install.sh
 
-```
-2. Extract public address: This will simplify usage of your public address by the agent
-```shell
-bash <(curl -H 'Cache-Control: no-cache' -s https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-agent/main/common/setup-node-address.sh) && echo $NODE_ADDRESS
 ```
