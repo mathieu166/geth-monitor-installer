@@ -52,4 +52,7 @@ echo "Enabling and starting the timer..."
 systemctl enable vitruveo-monitor-agent.timer
 systemctl start vitruveo-monitor-agent.timer
 
+systemctl enable vitruveo-monitor-agent.service
+systemctl start vitruveo-monitor-agent.service
+
 echo "Installation complete. The agent and timer should now be running."
