@@ -54,7 +54,7 @@ app.post('/', async (req, res) => {
     // Insert the check-in data into the validator_checkin table
     await client.query(
       'INSERT INTO validator_checkin (address, timestamp, peer_count) VALUES ($1, $2, $3)',
-      [address, timestamp, peer_count]
+      [address.toLowerCase(), timestamp, peer_count]
     );
 
     res.status(200).json({ status: 'ok' });
