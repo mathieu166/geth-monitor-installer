@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const { Client } = require('pg');
-const ethers = require('ethers');
+const {verifyMessage} = require('ethers');
 
 const app = express();
 const PORT = 3003;
@@ -24,7 +24,7 @@ client.connect();
 // Function to verify the message
 const verifyMessage = async ({ message, address, signature }) => {
   try {
-    const signerAddr = await ethers.utils.verifyMessage(message, signature);
+    const signerAddr = await verifyMessage(message, signature);
     return signerAddr.toLowerCase() === address.toLowerCase();
   } catch (err) {
     console.error('Verification error:', err);
