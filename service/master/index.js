@@ -22,7 +22,7 @@ const client = new Client({
 client.connect();
 
 // Function to verify the message
-const verifyMessage = async ({ message, address, signature }) => {
+const isMessageValid = async ({ message, address, signature }) => {
   try {
     const signerAddr = await verifyMessage(message, signature);
     return signerAddr.toLowerCase() === address.toLowerCase();
@@ -45,7 +45,7 @@ app.post('/', async (req, res) => {
     const message = `${address}${timestamp}`;
 
     // Verify the signature
-    const isValid = await verifyMessage({ message, address, signature });
+    const isValid = await isMessageValid({ message, address, signature });
 
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid signature' });
