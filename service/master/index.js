@@ -47,7 +47,7 @@ const isMessageValid = async ({ message, address, signature }) => {
 };
 
 // Endpoint to handle the POST request from agent.sh
-app.post('/', async (req, res) => {
+app.post('/checkin', async (req, res) => {
   try {
     const { key: signature, timestamp, address, peer_count } = req.body;
 
