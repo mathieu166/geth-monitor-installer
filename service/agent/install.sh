@@ -13,12 +13,12 @@ check_sudo() {
 check_sudo "$@"
 
 # Define variables
-BASE_URL="https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-agent/main"
+BASE_URL="https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-services/main"
 SERVICE_DIR="/home/ubuntu/vitruveo-monitor-agent"
 SERVICE_PATH="/etc/systemd/system/vitruveo-monitor-agent.service"
 TIMER_PATH="/etc/systemd/system/vitruveo-monitor-agent.timer"
-AGENT_SCRIPT_URL="https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-agent/main/service/agent/agent.sh"
-NODE_ADDRESS_SCRIPT_URL="https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-agent/main/common/setup-node-address.sh"
+AGENT_SCRIPT_URL="https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-services/main/service/agent/agent.sh"
+NODE_ADDRESS_SCRIPT_URL="https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-services/main/common/setup-node-address.sh"
 
 # Create the directory if it doesn't exist
 mkdir -p "$SERVICE_DIR"
