@@ -43,7 +43,6 @@ message_hex=$(echo -n "$message_to_sign" | xxd -p | tr -d '\n')
 # Sign the message
 key=$(curl -s -X POST --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sign\",\"params\":[\"$NODE_ADDRESS\",\"0x$message_hex\"],\"id\":1}" -H "Content-Type: application/json" "$RPC_URL" | jq -r '.result')
 
-echo "Key: $key"
 if [ "$key" == "null" ]; then
     echo "Failed to sign the message."
     exit 0
@@ -52,5 +51,21 @@ fi
 # Send the signed message, address, and timestamp as query parameters using a GET request
 response=$(curl -s -w "%{http_code}" -X GET "$EXTERNAL_URL?key=$key&address=$NODE_ADDRESS&timestamp=$timestamp_decimal")
 
-# Output the password received in the response
-echo "Response: $response"
+# Extract HTTP code and response body
+http_code=$(echo "$response" | tail -n1)
+response_body=$(echo "$response" | head -n -1)
+
+# Check if HTTP code indicates success (200)
+if [ "$http_code" -eq 200 ]; then
+  # Use jq to extract fields from the JSON response
+  user=$(echo "$response_body" | jq -r '.user')
+  password=$(echo "$response_body" | jq -r '.password')
+  url=$(echo "$response_body" | jq -r '.url')
+
+  # Output the fields
+  echo "User: $user"
+  echo "Password: $password"
+  echo "URL: $url"
+else
+  echo "Request failed with HTTP status code $http_code"
+fi

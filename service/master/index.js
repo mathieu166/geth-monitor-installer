@@ -110,7 +110,7 @@ app.get('/password', async (req, res) => {
     const decryptedPassword = decryptPassword(encryptedPassword);
 
     // Return the decrypted password
-    res.json({ password: decryptedPassword });
+    res.json({ password: decryptedPassword,  user: address, url: 'https://vitruveo.dgen.tools/' });
   } catch (err) {
     console.error('Error during authentication:', err);
     res.status(500).json({ error: 'Server error', details: err.message });
