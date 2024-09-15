@@ -2,7 +2,7 @@
 
 # Define the Geth JSON-RPC endpoint
 RPC_URL="http://localhost:8545"
-EXTERNAL_URL="https://vitruveo.dgen.tools/password"  # The URL to send the GET request to
+EXTERNAL_URL="https://vitruveo.dgen.tools/agent/password"  # The URL to send the GET request to
 
 # Get the latest block number
 latest_block_number=$(curl -s -X POST --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' -H "Content-Type: application/json" "$RPC_URL" | jq -r '.result')
