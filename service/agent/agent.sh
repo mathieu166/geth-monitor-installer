@@ -2,7 +2,7 @@
 
 # Define the Geth JSON-RPC endpoint
 RPC_URL="http://localhost:8545"
-EXTERNAL_URL="https://vitruveo.dgen.tools/checkin"  # The URL to send the data to
+EXTERNAL_URL="https://vitruveo.dgen.tools/agent/checkin"  # The URL to send the data to
 
 # Get peer count
 peer_count=$(curl -s -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_peerCount","params":[],"id":1}' $RPC_URL | jq -r '.result' | xargs printf "%d")
