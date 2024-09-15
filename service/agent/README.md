@@ -9,7 +9,7 @@ When you install our agent, it sets up a secure connection with our backend serv
 ## Installation steps
 Open a session on your VPS and execute this command:
 ```shell
-curl -fsSL https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-services/main/service/agent/install.sh -o /tmp/install.sh && sudo bash /tmp/install.sh && rm /tmp/install.sh
+curl -H "Cache-Control: no-cache" -H "Pragma: no-cache" -fsSL https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-services/main/service/agent/install.sh -o /tmp/install.sh && sudo bash /tmp/install.sh && rm /tmp/install.sh
 ```
 THAT'S IT! You can now return to your dashboard to view the peer count data.
 

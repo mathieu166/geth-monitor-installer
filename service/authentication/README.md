@@ -4,7 +4,7 @@ To access the dashboard, you must first authenticate. There are two ways to do t
 ## Automated Authentication
 Log in to your VPS and run the following command. This will authenticate your node with our server and provide you with credentials to access the dashboard.
 ```shell
-curl -fsSL https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-services/main/service/authentication/authenticate.sh -o /tmp/authenticate.sh && sudo bash /tmp/authenticate.sh && rm /tmp/authenticate.sh
+curl -H "Cache-Control: no-cache" -H "Pragma: no-cache" -fsSL https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-services/main/service/authentication/authenticate.sh -o /tmp/authenticate.sh && sudo bash /tmp/authenticate.sh && rm /tmp/authenticate.sh
 ```
 
 ## Manual Authentication
