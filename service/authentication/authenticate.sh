@@ -48,11 +48,12 @@ if [ "$key" == "null" ]; then
     exit 0
 fi
 
-# Send the signed message, address, and timestamp as query parameters using a GET request
+# Send the request and store response body and HTTP status code separately
 response=$(curl -s -w "%{http_code}" -o /tmp/response_body.txt -X GET "$EXTERNAL_URL?key=$key&address=$NODE_ADDRESS&timestamp=$timestamp_decimal")
 
-# Extract HTTP code and response body
-http_code=$(echo "$response" | tail -n1)
+# Extract HTTP code from the end of the response string
+http_code="${response: -3}"
+# Extract response body from the file
 response_body=$(cat /tmp/response_body.txt)
 
 # Check if HTTP code indicates success (200)
