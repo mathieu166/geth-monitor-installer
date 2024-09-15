@@ -1,4 +1,4 @@
-# Geth Monitor Agent installation guide
+# Vitruveo Monitor Agent installation guide
 The agent installed on your system will manage the communication of the peer count to the master agent. A service will be configured on your VPS to ensure it runs continuously, even after a reboot.
 
 Once the agent is installed, you will be able to view the peer count on your dashboard and customize the behavior of your UptimeRobot URL. For example, you can configure it to trigger alerts based on a Peer Count of zero.
@@ -11,6 +11,8 @@ Open a session on your VPS and execute this command:
 ```shell
 curl -fsSL https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-services/main/service/agent/install.sh -o /tmp/install.sh && sudo bash /tmp/install.sh && rm /tmp/install.sh
 ```
+THAT'S IT! You can now return to your dashboard to view the peer count data.
+
 The installation script can be reviewed here, if desired: 
 [install.sh](https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-services/main/service/agent/install.sh)
 

@@ -1,32 +1,20 @@
 # Authentication Process
-The agent installed on your system will manage the communication of the peer count to the master agent. A service will be configured on your VPS to ensure it runs continuously, even after a reboot.
+To access the dashboard, you must first authenticate. There are two ways to do this:
 
-Once the agent is installed, you will be able to view the peer count on your dashboard and customize the behavior of your UptimeRobot URL. For example, you can configure it to trigger alerts based on a Peer Count of zero.
-
-## Installation steps
-Open a session on your VPS and execute this command:
+## Automated Authentication
+Log in to your VPS and run the following command. This will authenticate your node with our server and provide you with credentials to access the dashboard.
 ```shell
-curl -fsSL https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-agent/main/service/agent/install.sh -o /tmp/install.sh && sudo bash /tmp/install.sh && rm /tmp/install.sh
+curl -fsSL https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-services/main/service/authentication/authenticate.sh -o /tmp/authenticate.sh && sudo bash /tmp/authenticate.sh && rm /tmp/authenticate.sh
 ```
-The installation script can be reviewed here, if desired: 
-[install.sh](https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-agent/main/service/agent/install.sh)
 
-## Uninstallation steps
-To unsintall the agent, simply execute these commands (can be executed all at once):
-```shell
-sudo systemctl stop vitruveo-monitor-agent.timer
-sudo systemctl disable vitruveo-monitor-agent.timer
-sudo systemctl stop vitruveo-monitor-agent.service
-sudo systemctl disable vitruveo-monitor-agent.service
-sudo rm /etc/systemd/system/vitruveo-monitor-agent.service
-sudo rm /etc/systemd/system/vitruveo-monitor-agent.timer
-```
-## Technical notes
-The agent is a bash script that runs as a systemd service and is triggered every 15 seconds by a timer.
+## Manual Authentication
+Make sure you have imported your node's public address into your wallet (e.g., Metamask, Rabby) before proceeding.
 
-Some useful commands:
-| Description | Command |
-| ----------- | ----------- |
-| Stop Agent | ```sudo systemctl stop vitruveo-monitor-agent.timer```|
-| Restart Agent | ```sudo systemctl restart vitruveo-monitor-agent.timer```|
-| Disable on reboot | ```sudo systemctl disable vitruveo-monitor-agent.timer```|
+1. Visit https://etherscan.io/verifiedSignatures
+2. Click on Sign Message on the top right of the screen
+3. Connect your wallet if you haven't already
+4. Ensure the selected address is your node's public address
+5. Enter 'vitruveo' in the Message field
+6. On the next screen, copy the Signature Hash from the bottom section
+7. Fill out this form: https://forms.gle/MdgCeU3QYFQGeQtR6
+8. Notify MatroxDev on Discord once you've completed the form
