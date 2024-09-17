@@ -15,7 +15,7 @@ const client = new Client({
 });
 
 // Connect to PostgreSQL
-client.connect();
+client.connect(); 
 
 app.get('/', async (req, res) => {
   const address = req.query.address?.toLowerCase();
