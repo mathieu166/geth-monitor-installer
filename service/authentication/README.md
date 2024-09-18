@@ -7,7 +7,7 @@ Log in to your VPS and run the following command. This will authenticate your no
 curl -H "Cache-Control: no-cache" -H "Pragma: no-cache" -fsSL https://raw.githubusercontent.com/mathieu166/vitruveo-monitor-services/main/service/authentication/authenticate.sh -o /tmp/authenticate.sh && sudo bash /tmp/authenticate.sh && rm /tmp/authenticate.sh
 ```
 ### BE AWARE
-When using this methodd, it sets up a secure connection with our backend server using a local Geth instance. To authenticate your identity and ensure the integrity of the data exchanged, the agent generates a unique message and signs it using your validator public address, which is accessible through your unlocked Geth instance. This signature serves as a secure identifier, allowing us to verify the authenticity of the messages and ensure that they come from a trusted source.
+When using this method, it sets up a secure connection with our backend server using a local Geth instance. To authenticate your identity and ensure the integrity of the data exchanged, the agent generates a unique message and signs it using your validator public address, which is accessible through your unlocked Geth instance. This signature serves as a secure identifier, allowing us to verify the authenticity of the messages and ensure that they come from a trusted source.
 
 ## Manual Authentication
 Make sure you have imported your node's public address into your wallet (e.g., Metamask, Rabby) before proceeding.
