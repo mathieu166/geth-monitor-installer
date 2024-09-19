@@ -22,5 +22,4 @@ Make sure you have imported your node's public address into your wallet (e.g., M
 4. Ensure the selected address is your node's public address
 5. Enter 'vitruveo' in the Message field
 6. On the next screen, copy the Signature Hash from the bottom section
-7. Fill out this form: https://forms.gle/MdgCeU3QYFQGeQtR6
-8. Notify MatroxDev on Discord once you've completed the form
+7. Once completed, please notify MatroxDev on Discord, and you'll receive the password to access the dashboard.
