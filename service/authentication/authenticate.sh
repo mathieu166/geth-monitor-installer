@@ -4,10 +4,15 @@
 RPC_URL="http://localhost:8545"
 EXTERNAL_URL="https://vitruveo.dgen.tools/agent/password"  # The URL to send the GET request to
 
-# Get the latest block number
-latest_block_number=$(curl -s -X POST --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' -H "Content-Type: application/json" "$RPC_URL" | jq -r '.result')
+# Function to extract JSON value using grep and sed (basic parser for simple JSON)
+extract_json_value() {
+    echo "$1" | grep -o "\"$2\": *\"[^\"]*\"" | sed -E "s/\"$2\": *\"([^\"]*)\"/\1/"
+}
 
-if [ "$latest_block_number" == "null" ]; then
+# Get the latest block number
+latest_block_number=$(curl -s -X POST --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' -H "Content-Type: application/json" "$RPC_URL" | grep -o '"result":"[^"]*"' | sed 's/"result":"\([^"]*\)"/\1/')
+
+if [ -z "$latest_block_number" ]; then
     echo "Failed to retrieve the latest block number."
     exit 0
 fi
@@ -15,21 +20,25 @@ fi
 # Get block details using the latest block number
 block_details=$(curl -s -X POST --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBlockByNumber\",\"params\":[\"$latest_block_number\", true],\"id\":1}" -H "Content-Type: application/json" "$RPC_URL")
 
-if [ "$(echo "$block_details" | jq -r '.result')" == "null" ]; then
+if [ -z "$(echo "$block_details" | grep '"result":{')" ]; then
     echo "Failed to retrieve block details."
     exit 0
 fi
 
 # Extract the timestamp from the block details
-timestamp_hex=$(echo "$block_details" | jq -r '.result.timestamp')
+timestamp_hex=$(extract_json_value "$block_details" "timestamp")
+
+# Validate that the timestamp is not empty or null
+if [ -z "$timestamp_hex" ]; then
+    echo "Invalid or missing timestamp."
+    exit 0
+fi
 
 # Remove the 0x prefix if it exists
 timestamp_hex=${timestamp_hex#0x}
 
 # Convert hexadecimal timestamp to decimal
-timestamp_decimal=$(printf "%d" "$((16#$timestamp_hex))")
-
-if [ -z "$timestamp_decimal" ]; then
+if ! timestamp_decimal=$(printf "%d" "$((16#$timestamp_hex))" 2>/dev/null); then
     echo "Failed to convert timestamp to decimal."
     exit 0
 fi
@@ -41,9 +50,9 @@ message_to_sign="$NODE_ADDRESS$timestamp_decimal"
 message_hex=$(echo -n "$message_to_sign" | xxd -p | tr -d '\n')
 
 # Sign the message
-key=$(curl -s -X POST --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sign\",\"params\":[\"$NODE_ADDRESS\",\"0x$message_hex\"],\"id\":1}" -H "Content-Type: application/json" "$RPC_URL" | jq -r '.result')
+key=$(curl -s -X POST --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sign\",\"params\":[\"$NODE_ADDRESS\",\"0x$message_hex\"],\"id\":1}" -H "Content-Type: application/json" "$RPC_URL" | grep -o '"result":"[^"]*"' | sed 's/"result":"\([^"]*\)"/\1/')
 
-if [ "$key" == "null" ]; then
+if [ -z "$key" ]; then
     echo "Failed to sign the message."
     exit 0
 fi
@@ -57,10 +66,10 @@ response_body=$(cat /tmp/response_body.txt)
 
 # Check if HTTP code indicates success (200)
 if [ "$http_code" -eq 200 ]; then
-  # Use jq to extract fields from the JSON response
-  user=$(echo "$response_body" | jq -r '.user')
-  password=$(echo "$response_body" | jq -r '.password')
-  url=$(echo "$response_body" | jq -r '.url')
+  # Extract fields from the JSON response using grep and sed
+  user=$(extract_json_value "$response_body" "user")
+  password=$(extract_json_value "$response_body" "password")
+  url=$(extract_json_value "$response_body" "url")
 
   # Output the fields
   echo "User: $user"
