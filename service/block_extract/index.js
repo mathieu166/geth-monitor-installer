@@ -1,6 +1,6 @@
 require('dotenv').config();
 const axios = require('axios');
-const { Client } = require('pg'); 
+const { Client } = require('pg');
 
 const client = new Client({
   user: process.env.DB_USER,
@@ -110,13 +110,13 @@ const fetchSigner = async (blockHash) => {
   }
 };
 
-// Process the blocks
+// Main processing loop
 const processBlocks = async () => {
-  let gasPrice
+  let gasPrice;
   while (true) {
     try {
-      if(!gasPrice){
-          gasPrice = await fetchGasPrice(); // Fetch the current gas price
+      if (!gasPrice) {
+        gasPrice = await fetchGasPrice();
       }
 
       const currentBlockNumber = parseInt(await fetchBlockNumber(), 10);
@@ -125,41 +125,45 @@ const processBlocks = async () => {
       if (isNaN(currentBlockNumber) || isNaN(latestBlockProcessed)) {
         throw new Error('Failed to parse block numbers');
       }
-      
-      const maxBlockToProcess = currentBlockNumber - 10;
+
+      const maxBlockToProcess = currentBlockNumber - 20;
 
       if (maxBlockToProcess <= latestBlockProcessed) {
         console.log("No new blocks to process or all blocks are too close to the latest block");
-        await new Promise(resolve => setTimeout(resolve, 10000)); // Sleep before checking again
+        await new Promise(resolve => setTimeout(resolve, 10000));
         continue;
       }
 
-
+      // Process blocks
       for (let blockNumber = latestBlockProcessed + 1; blockNumber <= maxBlockToProcess; blockNumber++) {
-        try {
-          const blockInfo = await fetchBlockInfo(blockNumber);
-          const blockHash = blockInfo.hash;
-          const timestamp = parseInt(blockInfo.timestamp, 16);
-          const transactionCount = blockInfo.transactions.length;
-          
-          // Calculate fee earned
-          const gasUsed = parseInt(blockInfo.gasUsed, 16);
-          const feeEarned = gasUsed * gasPrice;
-
-          if (blockHash) {
-            const signerAddress = await fetchSigner(blockHash);
-            if (signerAddress) {
-              await updateBlock(blockNumber, timestamp, blockHash, signerAddress, transactionCount, feeEarned);
-            }
-          }
-        } catch (error) {
-          console.error(`Error fetching block data: ${error.message}`);
+        const blockInfo = await fetchBlockInfo(blockNumber);
+        
+        if (!blockInfo) {
+          throw new Error(`Error fetching block: ${blockNumber}`);
         }
-        await new Promise(resolve => setTimeout(resolve, 1000 / 100)); // Rate limit
+
+        const blockHash = blockInfo.hash;
+        const timestamp = parseInt(blockInfo.timestamp, 16);
+        const transactionCount = blockInfo.transactions.length;
+
+        // Calculate fee earned
+        const gasUsed = parseInt(blockInfo.gasUsed, 16);
+        const feeEarned = gasUsed * gasPrice;
+
+        if (blockHash) {
+          const signerAddress = await fetchSigner(blockHash);
+          if (signerAddress) {
+            await updateBlock(blockNumber, timestamp, blockHash, signerAddress, transactionCount, feeEarned);
+          }
+        } else {
+          throw new Error(`Error fetching signer for block: ${blockNumber}`);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1000 / 100));
       }
     } catch (error) {
-      console.error(`Error fetching latest block number: ${error.message}`);
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Retry delay
+      console.error(`Error processing blocks: ${error.message}`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
     }
   }
 };
