@@ -4,173 +4,298 @@
  * Example JavaScript code that interacts with the page and Web3 wallets
  */
 
- // Unpkg imports
+// Unpkg imports
 const Web3Modal = window.Web3Modal.default;
 const WalletConnectProvider = window.WalletConnectProvider.default;
 const Fortmatic = window.Fortmatic;
 const evmChains = window.evmChains;
 
+const BASE_API_URL_PLACEHOLDER = null;
+const BASE_API_URL = BASE_API_URL_PLACEHOLDER || "http://localhost:3003/panel";
+
 // Web3modal instance
-let web3Modal
+let web3Modal;
 
 // Chosen wallet provider given by the dialog window
 let provider;
 
-
 // Address of the selected account
 let selectedAccount;
 
+let sessionKey;
+let discordUsername;
 
 /**
  * Setup the orchestra
  */
-function init() {
-
+async function init() {
   console.log("Initializing example");
-  console.log("WalletConnectProvider is", WalletConnectProvider);
-  console.log("Fortmatic is", Fortmatic);
-  console.log("window.web3 is", window.web3, "window.ethereum is", window.ethereum);
-
-  // Check that the web page is run in a secure context,
-  // as otherwise MetaMask won't be available
-  if(location.protocol !== 'https:') {
-    // https://ethereum.stackexchange.com/a/62217/620
-    const alert = document.querySelector("#alert-error-https");
-    alert.style.display = "block";
-    document.querySelector("#btn-connect").setAttribute("disabled", "disabled")
-    return;
-  }
 
   // Tell Web3modal what providers we have available.
-  // Built-in web browser provider (only one can exist as a time)
-  // like MetaMask, Brave or Opera is added automatically by Web3modal
   const providerOptions = {
     walletconnect: {
       package: WalletConnectProvider,
-      options: {
-      }
+      options: {},
     },
   };
 
   web3Modal = new Web3Modal({
-    cacheProvider: false, // optional
-    providerOptions, // required
-    disableInjectedProvider: false, // optional. For MetaMask / Brave / Opera.
+    cacheProvider: true, // Enable caching of the provider
+    providerOptions,
+    disableInjectedProvider: false,
   });
 
   console.log("Web3Modal instance is", web3Modal);
+
+  // Extract URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const key = urlParams.get("key");
+  const discordUser = urlParams.get("discorduser");
+
+  if (key) {
+    sessionKey = key;
+    document.querySelector("#url-key").textContent = key;
+  } else {
+    document.querySelector("#url-key").textContent = "Not provided";
+  }
+
+  if (discordUser) {
+    discordUsername = discordUser;
+    document.querySelector("#url-discord-user").textContent = discordUser;
+  } else {
+    document.querySelector("#url-discord-user").textContent = "Not provided";
+  }
+
+  if (key && discordUser) {
+    refreshVerifiedWallets(discordUser, key);
+  }
+
+  // Check if a cached provider exists
+  const cachedProvider = web3Modal.cachedProvider;
+  if (cachedProvider) {
+    provider = await web3Modal.connect();
+    setupProviderListeners(); // Set up event listeners for provider
+    await refreshAccountData();
+    await fetchAccountData();
+  }
 }
 
+const refreshVerifiedWallets = async (discordUser, key) => {
+  try {
+    // Fetch verified wallets for the discord user
+    const response = await fetch(
+      `${BASE_API_URL}/getVerifiedWallets?discord_username=${discordUser}&session_key=${key}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    // Check if the response is successful
+    if (response.status === 403) {
+      // Hide the content if a 403 response is received
+      const contentElement = document.getElementById("content");
+      contentElement.style.display = "none";
+
+      // Unhide the session expiration message
+      const sessionExpiredMessage = document.getElementById(
+        "session-expired-message"
+      );
+      sessionExpiredMessage.style.display = "block"; // Unhide the message
+      return; // Exit the function
+    }
+
+    // Check if the response is successful
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status} - ${response.statusText}`);
+    }
+
+    // Parse the JSON response
+    const data = await response.json();
+
+    // Select the template and the container for the verified wallets
+    const template = document.querySelector("#template-verified-wallet");
+    const walletsContainer = document.querySelector("#wallets"); // Make sure this line is within the function
+
+    // Clear any previously loaded wallets
+    walletsContainer.innerHTML = "";
+
+    // If no wallets are found, show a message or leave the table empty
+    if (!data.wallets || data.wallets.length === 0) {
+      walletsContainer.innerHTML =
+        '<tr><td colspan="2">No verified wallets found.</td></tr>';
+      return;
+    }
+
+    // Iterate over the wallets and append them to the table
+    data.wallets.forEach((wallet) => {
+      const clone = template.content.cloneNode(true);
+
+      // Populate the template with wallet data (address and metadata)
+      clone.querySelector(".address").textContent = wallet.address;
+      clone.querySelector(".password").textContent = wallet.password; // Example: if wallets have a label
+
+      // Append the cloned row to the container
+      walletsContainer.appendChild(clone);
+    });
+  } catch (error) {
+    console.error("Error refreshing verified wallets:", error.message);
+    // Optionally, display an error message in the UI
+    const walletsContainer = document.querySelector("#wallets"); // Ensure this line is included here as well
+    walletsContainer.innerHTML =
+      '<tr><td colspan="2">Failed to load verified wallets.</td></tr>';
+  }
+};
 
 /**
  * Kick in the UI action after Web3modal dialog has chosen a provider
  */
 async function fetchAccountData() {
-
-  // Get a Web3 instance for the wallet
   const web3 = new Web3(provider);
-
   console.log("Web3 instance is", web3);
 
-  // Get connected chain id from Ethereum node
-  const chainId = await web3.eth.getChainId();
-  // Load chain information over an HTTP API
-  const chainData = evmChains.getChain(chainId);
-  document.querySelector("#network-name").textContent = chainData.name;
-
-  // Get list of accounts of the connected wallet
   const accounts = await web3.eth.getAccounts();
-
-  // MetaMask does not give you all accounts, only the selected account
   console.log("Got accounts", accounts);
-  selectedAccount = accounts[0];
 
+  selectedAccount = accounts[0];
   document.querySelector("#selected-account").textContent = selectedAccount;
 
-  // Get a handl
-  const template = document.querySelector("#template-balance");
-  const accountContainer = document.querySelector("#accounts");
+  // Fetch verification status of the selected account
+  await checkValidatorStatus(selectedAccount);
 
-  // Purge UI elements any previously loaded accounts
-  accountContainer.innerHTML = '';
-
-  // Go through all accounts and get their ETH balance
-  const rowResolvers = accounts.map(async (address) => {
-    const balance = await web3.eth.getBalance(address);
-    // ethBalance is a BigNumber instance
-    // https://github.com/indutny/bn.js/
-    const ethBalance = web3.utils.fromWei(balance, "ether");
-    const humanFriendlyBalance = parseFloat(ethBalance).toFixed(4);
-    // Fill in the templated row and put in the document
-    const clone = template.content.cloneNode(true);
-    clone.querySelector(".address").textContent = address;
-    clone.querySelector(".balance").textContent = humanFriendlyBalance;
-    accountContainer.appendChild(clone);
-  });
-
-  // Because rendering account does its own RPC commucation
-  // with Ethereum node, we do not want to display any results
-  // until data for all accounts is loaded
-  await Promise.all(rowResolvers);
-
-  // Display fully loaded UI for wallet data
   document.querySelector("#prepare").style.display = "none";
   document.querySelector("#connected").style.display = "block";
 }
 
+// New function to check if the address is a validator
+async function checkValidatorStatus(address) {
+  try {
+    const response = await fetch(
+      `${BASE_API_URL}/verifyWallet?discord_username=${discordUsername}&session_key=${sessionKey}&address=${address}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status} - ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    // Update the UI based on the verification result
+    const statusMessage = document.createElement("span");
+    statusMessage.style.color = "red"; // Set the text color to red
+    const statusText = data.found ? "" : "   (Not a validator address)";
+    statusMessage.textContent = statusText;
+
+    // Create and append the Verify Wallet button (hidden by default)
+    const verifyButton = document.createElement("button");
+    verifyButton.textContent = "Verify Wallet";
+    verifyButton.style.display = "none"; // Hide button by default
+    verifyButton.style.marginLeft = "10px"; // Add some space between the message and the button
+    document.querySelector("#selected-account").appendChild(verifyButton);
+
+    if (data.found) {
+      // Unhide the button when data.found is true
+      verifyButton.style.display = "inline-block"; // or "block" depending on your layout
+
+      // Event listener for the button
+      verifyButton.addEventListener("click", async () => {
+        // Sign the message
+        const message = `I am the owner of this wallet (Session Key: ${sessionKey})`;
+        const web3 = new Web3(provider);
+        const signature = await web3.eth.personal.sign(
+          message,
+          selectedAccount
+        );
+
+        // Send the signed message to /confirmOwnership
+        const confirmResponse = await fetch(
+          `${BASE_API_URL}/confirmOwnership`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              signedMessage: signature,
+              message: message,
+              sessionKey: sessionKey,
+              discordUsername: discordUsername,
+              address: selectedAccount,
+            }),
+          }
+        );
+
+        if (confirmResponse.ok) {
+          // Handle successful confirmation
+          const confirmData = await confirmResponse.json();
+          console.log("Ownership confirmed:", confirmData);
+          refreshVerifiedWallets(discordUsername, sessionKey);
+        } else {
+          // Handle errors
+          console.error(
+            "Error confirming ownership:",
+            confirmResponse.statusText
+          );
+        }
+      });
+    }
+
+    // Append the message next to the selected account
+    const accountElement = document.querySelector("#selected-account");
+    accountElement.appendChild(statusMessage);
+  } catch (error) {
+    console.error("Error checking validator status:", error.message);
+  }
+}
 
 /**
- * Fetch account data for UI when
- * - User switches accounts in wallet
- * - User switches networks in wallet
- * - User connects wallet initially
+ * Fetch account data for UI when user switches accounts in wallet,
+ * switches networks in wallet, or connects wallet initially.
  */
 async function refreshAccountData() {
-
-  // If any current data is displayed when
-  // the user is switching acounts in the wallet
-  // immediate hide this data
   document.querySelector("#connected").style.display = "none";
   document.querySelector("#prepare").style.display = "block";
 
-  // Disable button while UI is loading.
-  // fetchAccountData() will take a while as it communicates
-  // with Ethereum node via JSON-RPC and loads chain data
-  // over an API call.
-  document.querySelector("#btn-connect").setAttribute("disabled", "disabled")
-  await fetchAccountData(provider);
-  document.querySelector("#btn-connect").removeAttribute("disabled")
+  document.querySelector("#btn-connect").setAttribute("disabled", "disabled");
+  await fetchAccountData();
+  document.querySelector("#btn-connect").removeAttribute("disabled");
 }
 
+function setupProviderListeners() {
+  if (provider) {
+    provider.on("accountsChanged", () => {
+      refreshAccountData();
+    });
+
+    provider.on("chainChanged", () => {
+      refreshAccountData();
+    });
+
+    provider.on("networkChanged", () => {
+      refreshAccountData();
+    });
+  }
+}
 
 /**
  * Connect wallet button pressed.
  */
 async function onConnect() {
-
   console.log("Opening a dialog", web3Modal);
   try {
     provider = await web3Modal.connect();
-  } catch(e) {
+    setupProviderListeners(); // Set up event listeners for provider
+  } catch (e) {
     console.log("Could not get a wallet connection", e);
     return;
   }
-
-  // Subscribe to accounts change
-  provider.on("accountsChanged", (accounts) => {
-    fetchAccountData();
-  });
-
-  // Subscribe to chainId change
-  provider.on("chainChanged", (chainId) => {
-    fetchAccountData();
-  });
-
-  // Subscribe to networkId change
-  provider.on("networkChanged", (networkId) => {
-    fetchAccountData();
-  });
 
   await refreshAccountData();
 }
@@ -179,34 +304,26 @@ async function onConnect() {
  * Disconnect wallet button pressed.
  */
 async function onDisconnect() {
-
   console.log("Killing the wallet connection", provider);
 
-  // TODO: Which providers have close method?
-  if(provider.close) {
+  if (provider.close) {
     await provider.close();
-
-    // If the cached provider is not cleared,
-    // WalletConnect will default to the existing session
-    // and does not allow to re-scan the QR code with a new wallet.
-    // Depending on your use case you may want or want not his behavir.
     await web3Modal.clearCachedProvider();
     provider = null;
   }
 
   selectedAccount = null;
-
-  // Set the UI back to the initial state
   document.querySelector("#prepare").style.display = "block";
   document.querySelector("#connected").style.display = "none";
 }
 
-
 /**
  * Main entry point.
  */
-window.addEventListener('load', async () => {
-  init();
+window.addEventListener("load", async () => {
+  await init();
   document.querySelector("#btn-connect").addEventListener("click", onConnect);
-  document.querySelector("#btn-disconnect").addEventListener("click", onDisconnect);
+  document
+    .querySelector("#btn-disconnect")
+    .addEventListener("click", onDisconnect);
 });

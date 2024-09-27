@@ -1,10 +1,15 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
+
 const { Client } = require('pg');
 const { verifyMessage } = require('ethers');
 const crypto = require('crypto');
 
+const { v4: uuidv4 } = require('uuid'); 
+
 const app = express();
+app.use(cors());
 const PORT = 3003;
 
 // Middleware to parse JSON bodies
@@ -45,6 +50,9 @@ const isMessageValid = async ({ message, address, signature }) => {
     return false;
   }
 };
+
+const panelRoutes = require('./routes/panel')(client);
+app.use('/panel', panelRoutes);
 
 // Endpoint to handle the POST request from agent.sh
 app.post('/checkin', async (req, res) => {
