@@ -45,8 +45,6 @@ async function init() {
     disableInjectedProvider: false,
   });
 
-  console.log("Web3Modal instance is", web3Modal);
-
   // Extract URL parameters
   const urlParams = new URLSearchParams(window.location.search);
   const key = urlParams.get("key");
@@ -153,6 +151,10 @@ const refreshVerifiedWallets = async (discordUser, key) => {
  * Kick in the UI action after Web3modal dialog has chosen a provider
  */
 async function fetchAccountData() {
+  if(!provider){
+    return;
+  }
+
   const web3 = new Web3(provider);
   console.log("Web3 instance is", web3);
 
