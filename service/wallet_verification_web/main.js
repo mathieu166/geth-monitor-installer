@@ -163,7 +163,7 @@ async function fetchAccountData() {
   document.querySelector("#selected-account").textContent = selectedAccount;
 
   // Fetch verification status of the selected account
-  await checkValidatorStatus(selectedAccount);
+  checkValidatorStatus(selectedAccount);
 
   document.querySelector("#prepare").style.display = "none";
   document.querySelector("#connected").style.display = "block";
@@ -187,18 +187,33 @@ async function checkValidatorStatus(address) {
     }
 
     const data = await response.json();
-    // Update the UI based on the verification result
+
+    // Select the account element
+    const accountElement = document.querySelector("#selected-account");
+
+    // Remove existing status message and button if they exist
+    const existingStatusMessage = accountElement.querySelector("span");
+    const existingVerifyButton = accountElement.querySelector("button");
+
+    if (existingStatusMessage) {
+      existingStatusMessage.remove();
+    }
+    if (existingVerifyButton) {
+      existingVerifyButton.remove();
+    }
+
+    // Create a new status message
     const statusMessage = document.createElement("span");
     statusMessage.style.color = "red"; // Set the text color to red
     const statusText = data.found ? "" : "   (Not a validator address)";
     statusMessage.textContent = statusText;
 
-    // Create and append the Verify Wallet button (hidden by default)
+    // Create the Verify Wallet button (hidden by default)
     const verifyButton = document.createElement("button");
     verifyButton.textContent = "Verify Wallet";
     verifyButton.style.display = "none"; // Hide button by default
-    verifyButton.style.marginLeft = "10px"; // Add some space between the message and the button
-    document.querySelector("#selected-account").appendChild(verifyButton);
+    verifyButton.style.marginLeft = "10px"; // Add space between the message and the button
+    accountElement.appendChild(verifyButton);
 
     if (data.found) {
       // Unhide the button when data.found is true
@@ -247,8 +262,7 @@ async function checkValidatorStatus(address) {
       });
     }
 
-    // Append the message next to the selected account
-    const accountElement = document.querySelector("#selected-account");
+    // Append the status message to the account element
     accountElement.appendChild(statusMessage);
   } catch (error) {
     console.error("Error checking validator status:", error.message);
@@ -297,7 +311,7 @@ async function onConnect() {
     return;
   }
 
-  await refreshAccountData();
+  refreshAccountData();
 }
 
 /**
