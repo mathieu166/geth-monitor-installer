@@ -61,17 +61,21 @@ async function init() {
   // Check if a cached provider exists
   const cachedProvider = web3Modal.cachedProvider;
   if (cachedProvider) {
-    try{
-        provider = await web3Modal.connect();
-        setupProviderListeners(); // Set up event listeners for provider
-        await refreshAccountData();
-        await fetchAccountData();
-    }catch(e){
-    }
+    try {
+      provider = await web3Modal.connect();
+      setupProviderListeners(); // Set up event listeners for provider
+      await refreshAccountData();
+      await fetchAccountData();
+    } catch (e) {}
   }
 }
 
-const refreshVerifiedWallets = async (discordUser, key) => {
+const refreshVerifiedWallets = async (
+  discordUser,
+  key,
+  retries = 3,
+  delay = 500
+) => {
   try {
     // Fetch verified wallets for the discord user
     const response = await fetch(
@@ -108,7 +112,7 @@ const refreshVerifiedWallets = async (discordUser, key) => {
 
     // Select the template and the container for the verified wallets
     const template = document.querySelector("#template-verified-wallet");
-    const walletsContainer = document.querySelector("#wallets"); // Make sure this line is within the function
+    const walletsContainer = document.querySelector("#wallets");
 
     // Clear any previously loaded wallets
     walletsContainer.innerHTML = "";
@@ -126,17 +130,25 @@ const refreshVerifiedWallets = async (discordUser, key) => {
 
       // Populate the template with wallet data (address and metadata)
       clone.querySelector(".address").textContent = wallet.address;
-      clone.querySelector(".password").textContent = wallet.password; // Example: if wallets have a label
+      clone.querySelector(".password").textContent = wallet.password;
 
       // Append the cloned row to the container
       walletsContainer.appendChild(clone);
     });
   } catch (error) {
     console.error("Error refreshing verified wallets:", error.message);
-    // Optionally, display an error message in the UI
-    const walletsContainer = document.querySelector("#wallets"); // Ensure this line is included here as well
-    walletsContainer.innerHTML =
-      '<tr><td colspan="2">Failed to load verified wallets.</td></tr>';
+
+    if (retries > 0) {
+      console.log(`Retrying... (${retries} attempts left)`);
+      setTimeout(() => {
+        refreshVerifiedWallets(discordUser, key, retries - 1, delay);
+      }, delay);
+    } else {
+      // If retries are exhausted, display an error message
+      const walletsContainer = document.querySelector("#wallets");
+      walletsContainer.innerHTML =
+        '<tr><td colspan="2">Failed to load verified wallets after multiple attempts.</td></tr>';
+    }
   }
 };
 
@@ -242,9 +254,9 @@ async function checkValidatorStatus(address) {
 
         if (confirmResponse.ok) {
           await confirmResponse.json();
-          setTimeout(()=>{
-              refreshVerifiedWallets(discordUsername, sessionKey);
-          }, 500)
+          setTimeout(() => {
+            refreshVerifiedWallets(discordUsername, sessionKey);
+          }, 500);
         } else {
           // Handle errors
           console.error(
