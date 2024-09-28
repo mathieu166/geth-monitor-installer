@@ -13,25 +13,16 @@ const evmChains = window.evmChains;
 const BASE_API_URL_PLACEHOLDER = null;
 const BASE_API_URL = BASE_API_URL_PLACEHOLDER || "http://localhost:3003/panel";
 
-// Web3modal instance
 let web3Modal;
 
-// Chosen wallet provider given by the dialog window
 let provider;
 
-// Address of the selected account
 let selectedAccount;
 
 let sessionKey;
 let discordUsername;
 
-/**
- * Setup the orchestra
- */
 async function init() {
-  console.log("Initializing example");
-
-  // Tell Web3modal what providers we have available.
   const providerOptions = {
     walletconnect: {
       package: WalletConnectProvider,
@@ -40,12 +31,11 @@ async function init() {
   };
 
   web3Modal = new Web3Modal({
-    cacheProvider: true, // Enable caching of the provider
+    cacheProvider: true,
     providerOptions,
     disableInjectedProvider: false,
   });
 
-  // Extract URL parameters
   const urlParams = new URLSearchParams(window.location.search);
   const key = urlParams.get("key");
   const discordUser = urlParams.get("discorduser");
@@ -71,10 +61,13 @@ async function init() {
   // Check if a cached provider exists
   const cachedProvider = web3Modal.cachedProvider;
   if (cachedProvider) {
-    provider = await web3Modal.connect();
-    setupProviderListeners(); // Set up event listeners for provider
-    await refreshAccountData();
-    await fetchAccountData();
+    try{
+        provider = await web3Modal.connect();
+        setupProviderListeners(); // Set up event listeners for provider
+        await refreshAccountData();
+        await fetchAccountData();
+    }catch(e){
+    }
   }
 }
 
@@ -151,15 +144,13 @@ const refreshVerifiedWallets = async (discordUser, key) => {
  * Kick in the UI action after Web3modal dialog has chosen a provider
  */
 async function fetchAccountData() {
-  if(!provider){
+  if (!provider || provider.close) {
     return;
   }
 
   const web3 = new Web3(provider);
-  console.log("Web3 instance is", web3);
 
   const accounts = await web3.eth.getAccounts();
-  console.log("Got accounts", accounts);
 
   selectedAccount = accounts[0];
   document.querySelector("#selected-account").textContent = selectedAccount;
@@ -250,9 +241,7 @@ async function checkValidatorStatus(address) {
         );
 
         if (confirmResponse.ok) {
-          // Handle successful confirmation
-          const confirmData = await confirmResponse.json();
-          console.log("Ownership confirmed:", confirmData);
+          await confirmResponse.json();
           refreshVerifiedWallets(discordUsername, sessionKey);
         } else {
           // Handle errors
@@ -304,8 +293,8 @@ function setupProviderListeners() {
  * Connect wallet button pressed.
  */
 async function onConnect() {
-  console.log("Opening a dialog", web3Modal);
   try {
+    console.log("onConnect");
     provider = await web3Modal.connect();
     setupProviderListeners(); // Set up event listeners for provider
   } catch (e) {
@@ -320,9 +309,7 @@ async function onConnect() {
  * Disconnect wallet button pressed.
  */
 async function onDisconnect() {
-  console.log("Killing the wallet connection", provider);
-
-  if (provider.close) {
+  if (provider && provider.close) {
     await provider.close();
     await web3Modal.clearCachedProvider();
     provider = null;
@@ -336,8 +323,11 @@ async function onDisconnect() {
 /**
  * Main entry point.
  */
-window.addEventListener("load", async () => {
-  await init();
+window.addEventListener("load", () => {
+  setTimeout(async () => {
+    await web3Modal?.clearCachedProvider();
+    await init();
+  }, 1000);
   document.querySelector("#btn-connect").addEventListener("click", onConnect);
   document
     .querySelector("#btn-disconnect")
