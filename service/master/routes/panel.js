@@ -187,7 +187,7 @@ module.exports = (client) => {
       }
 
       // Refresh session timeout
-      await refreshSessionTimeout(client, discord_username, sessionKey);
+      await refreshSessionTimeout(client, discord_username, session_key);
 
       // Step 2: Fetch addresses and encrypted passwords tied to the discord_username
       const addressResult = await client.query(
@@ -239,7 +239,7 @@ module.exports = (client) => {
       }
 
       // Refresh session timeout
-      await refreshSessionTimeout(client, discord_username, sessionKey);
+      await refreshSessionTimeout(client, discord_username, session_key);
 
 
       const query = "SELECT COUNT(*) FROM validator WHERE address = $1";
