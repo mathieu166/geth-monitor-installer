@@ -25,8 +25,7 @@ let discordUsername;
 async function init() {
   const providerOptions = {
     walletconnect: {
-      package: WalletConnectProvider,
-      options: {},
+      package: WalletConnectProvider
     },
   };
 
