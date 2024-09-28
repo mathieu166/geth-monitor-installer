@@ -84,7 +84,7 @@ module.exports = (client) => {
       );
 
       // Step 4: Return the new session_key
-      res.status(201).json({ session_key: newSessionKey });
+      res.status(200).json({ session_key: newSessionKey });
     } catch (err) {
       console.error("Error creating session:", err);
       res.status(500).json({ error: "Server error", details: err.message });
