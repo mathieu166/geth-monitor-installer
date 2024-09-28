@@ -242,7 +242,9 @@ async function checkValidatorStatus(address) {
 
         if (confirmResponse.ok) {
           await confirmResponse.json();
-          refreshVerifiedWallets(discordUsername, sessionKey);
+          setTimeout(()=>{
+              refreshVerifiedWallets(discordUsername, sessionKey);
+          }, 500)
         } else {
           // Handle errors
           console.error(
