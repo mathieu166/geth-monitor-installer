@@ -32,6 +32,15 @@ const isMessageValid = async ({ message, address, signature }) => {
   }
 };
 
+const refreshSessionTimeout = async (client, discordUsername, sessionKey) => {
+    await client.query(
+        `UPDATE validator_panel_session 
+         SET session_timeout = EXTRACT(EPOCH FROM NOW() + INTERVAL '30 minutes') 
+         WHERE discord_username = $1 AND session_key = $2`,
+        [discordUsername, sessionKey]
+    );
+};
+
 module.exports = (client) => {
   // Create session route
   router.post("/create_session", async (req, res) => {
@@ -113,6 +122,9 @@ module.exports = (client) => {
         return res.status(403).json({ error: "Invalid or expired session" });
       }
 
+      // Refresh session timeout
+      await refreshSessionTimeout(client, discordUsername, sessionKey);
+
       // Step 3: Verify ownership (signature check)
       const isValid = await isMessageValid({
         message,
@@ -174,6 +186,9 @@ module.exports = (client) => {
         return res.status(403).json({ error: "Invalid or expired session" });
       }
 
+      // Refresh session timeout
+      await refreshSessionTimeout(client, discordUsername, sessionKey);
+
       // Step 2: Fetch addresses and encrypted passwords tied to the discord_username
       const addressResult = await client.query(
         `SELECT address, encrypted_password 
@@ -222,6 +237,10 @@ module.exports = (client) => {
       if (sessionResult.rows.length === 0) {
         return res.status(403).json({ error: "Invalid or expired session" });
       }
+
+      // Refresh session timeout
+      await refreshSessionTimeout(client, discordUsername, sessionKey);
+
 
       const query = "SELECT COUNT(*) FROM validator WHERE address = $1";
       const result = await client.query(query, [address.toLowerCase()]);
