@@ -212,9 +212,15 @@ async function checkValidatorStatus(address) {
     const statusText = data.found ? "" : "   (Not a validator address)";
     statusMessage.textContent = statusText;
 
+
+    // <button class="btn btn-primary " id="btn-connect">
+    //                         Verify Wallet
+    //                     </button>
+
     // Create the Verify Wallet button (hidden by default)
     const verifyButton = document.createElement("button");
     verifyButton.textContent = "Verify Wallet";
+    verifyButton.className = "btn btn-primary verify-button";
     verifyButton.style.display = "none"; // Hide button by default
     verifyButton.style.marginLeft = "10px"; // Add space between the message and the button
     accountElement.appendChild(verifyButton);
