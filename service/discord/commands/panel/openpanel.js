@@ -54,7 +54,7 @@ module.exports = {
             const sessionKey = encryptText(sessionResponse.data.session_key);
       
             // Step 2: Build the panel URL with session_key and discord_username
-            const panelUrl = `${PANEL_URL}?key=${sessionKey}&discorduser=${discordUsername}`;
+            const panelUrl = `${PANEL_URL}?key=${sessionKey}&discorduser=${discordUsername}&timestamp=${new Date().getTime()}`;
       
             // Step 3: Create the button with the panel URL
             const button = new ButtonBuilder()
