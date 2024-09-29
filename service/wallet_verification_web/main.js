@@ -25,7 +25,7 @@ let discordUsername;
 async function init() {
   const providerOptions = {
     walletconnect: {
-      package: WalletConnectProvider
+      package: WalletConnectProvider,
     },
   };
 
@@ -41,9 +41,6 @@ async function init() {
 
   if (key) {
     sessionKey = key;
-    document.querySelector("#url-key").textContent = key;
-  } else {
-    document.querySelector("#url-key").textContent = "Not provided";
   }
 
   if (discordUser) {
@@ -57,6 +54,8 @@ async function init() {
     refreshVerifiedWallets(discordUser, key);
   }
 
+  configureVerifyButton();
+
   // Check if a cached provider exists
   const cachedProvider = web3Modal.cachedProvider;
   if (cachedProvider) {
@@ -68,6 +67,39 @@ async function init() {
     } catch (e) {}
   }
 }
+
+const configureVerifyButton = () => {
+  const verifyButton = document.getElementById("btn-verify");
+
+  verifyButton.addEventListener("click", async () => {
+    const message = `I am the owner of this wallet (Session Key: ${sessionKey})`;
+    const web3 = new Web3(provider);
+    const signature = await web3.eth.personal.sign(message, selectedAccount);
+
+    const confirmResponse = await fetch(`${BASE_API_URL}/confirmOwnership`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        signedMessage: signature,
+        message: message,
+        sessionKey: sessionKey,
+        discordUsername: discordUsername,
+        address: selectedAccount,
+      }),
+    });
+
+    if (confirmResponse.ok) {
+      await confirmResponse.json();
+      setTimeout(() => {
+        refreshVerifiedWallets(discordUsername, sessionKey);
+      }, 500);
+    } else {
+      console.error("Error confirming ownership:", confirmResponse.statusText);
+    }
+  });
+};
 
 const refreshVerifiedWallets = async (
   discordUser,
@@ -117,14 +149,14 @@ const refreshVerifiedWallets = async (
     walletsContainer.innerHTML = "";
 
     // If no wallets are found, show a message or leave the table empty
-    if (!data.wallets || data.wallets.length === 0) {
+    if ((!data.validators || data.validators.length === 0) && (!data.wallets || data.wallets.length === 0) ) {
       walletsContainer.innerHTML =
         '<tr><td colspan="2">No verified wallets found.</td></tr>';
       return;
     }
 
     // Iterate over the wallets and append them to the table
-    data.wallets.forEach((wallet) => {
+    data.validators?.forEach((wallet) => {
       const clone = template.content.cloneNode(true);
 
       // Populate the template with wallet data (address and metadata)
@@ -134,6 +166,18 @@ const refreshVerifiedWallets = async (
       // Append the cloned row to the container
       walletsContainer.appendChild(clone);
     });
+
+    // Iterate over the wallets and append them to the table
+    data.wallets?.forEach((wallet) => {
+        const clone = template.content.cloneNode(true);
+  
+        // Populate the template with wallet data (address and metadata)
+        clone.querySelector(".address").textContent = wallet.address + ' (Not a validator)';
+        clone.querySelector(".password").textContent = 'N/A';
+  
+        // Append the cloned row to the container
+        walletsContainer.appendChild(clone);
+      });
   } catch (error) {
     console.error("Error refreshing verified wallets:", error.message);
 
@@ -166,117 +210,8 @@ async function fetchAccountData() {
   selectedAccount = accounts[0];
   document.querySelector("#selected-account").textContent = selectedAccount;
 
-  // Fetch verification status of the selected account
-  checkValidatorStatus(selectedAccount);
-
   document.querySelector("#prepare").style.display = "none";
   document.querySelector("#connected").style.display = "block";
-}
-
-// New function to check if the address is a validator
-async function checkValidatorStatus(address) {
-  try {
-    const response = await fetch(
-      `${BASE_API_URL}/verifyWallet?discord_username=${discordUsername}&session_key=${sessionKey}&address=${address}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Error: ${response.status} - ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // Select the account element
-    const accountElement = document.querySelector("#selected-account");
-
-    // Remove existing status message and button if they exist
-    const existingStatusMessage = accountElement.querySelector("span");
-    const existingVerifyButton = accountElement.querySelector("button");
-
-    if (existingStatusMessage) {
-      existingStatusMessage.remove();
-    }
-    if (existingVerifyButton) {
-      existingVerifyButton.remove();
-    }
-
-    // Create a new status message
-    const statusMessage = document.createElement("span");
-    statusMessage.style.color = "red"; // Set the text color to red
-    const statusText = data.found ? "" : "   (Not a validator address)";
-    statusMessage.textContent = statusText;
-
-
-    // <button class="btn btn-primary " id="btn-connect">
-    //                         Verify Wallet
-    //                     </button>
-
-    // Create the Verify Wallet button (hidden by default)
-    const verifyButton = document.createElement("button");
-    verifyButton.textContent = "Verify Wallet";
-    verifyButton.className = "btn btn-primary verify-button";
-    verifyButton.style.display = "none"; // Hide button by default
-    verifyButton.style.marginLeft = "10px"; // Add space between the message and the button
-    accountElement.appendChild(verifyButton);
-
-    if (data.found) {
-      // Unhide the button when data.found is true
-      verifyButton.style.display = "inline-block"; // or "block" depending on your layout
-
-      // Event listener for the button
-      verifyButton.addEventListener("click", async () => {
-        // Sign the message
-        const message = `I am the owner of this wallet (Session Key: ${sessionKey})`;
-        const web3 = new Web3(provider);
-        const signature = await web3.eth.personal.sign(
-          message,
-          selectedAccount
-        );
-
-        // Send the signed message to /confirmOwnership
-        const confirmResponse = await fetch(
-          `${BASE_API_URL}/confirmOwnership`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              signedMessage: signature,
-              message: message,
-              sessionKey: sessionKey,
-              discordUsername: discordUsername,
-              address: selectedAccount,
-            }),
-          }
-        );
-
-        if (confirmResponse.ok) {
-          await confirmResponse.json();
-          setTimeout(() => {
-            refreshVerifiedWallets(discordUsername, sessionKey);
-          }, 500);
-        } else {
-          // Handle errors
-          console.error(
-            "Error confirming ownership:",
-            confirmResponse.statusText
-          );
-        }
-      });
-    }
-
-    // Append the status message to the account element
-    accountElement.appendChild(statusMessage);
-  } catch (error) {
-    console.error("Error checking validator status:", error.message);
-  }
 }
 
 /**

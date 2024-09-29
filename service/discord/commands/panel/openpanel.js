@@ -4,6 +4,29 @@ const axios = require('axios');
 const MASTER_BASE_URL = process.env.MASTER_BASE_URL;
 const PANEL_URL = process.env.PANEL_URL;
 
+const crypto = require("crypto");
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY; // Key from environment variable
+const IV_LENGTH = 16; // For AES, this is always 16 bytes
+
+function encryptText(text) {
+  // Generate a random initialization vector (IV)
+  const iv = crypto.randomBytes(IV_LENGTH);
+
+  // Create a cipher using the encryption key and the IV
+  const cipher = crypto.createCipheriv(
+    "aes-256-cbc",
+    Buffer.from(ENCRYPTION_KEY),
+    iv
+  );
+
+  // Encrypt the text
+  let encrypted = cipher.update(text);
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+
+  // Return the IV and the encrypted text, both encoded in hexadecimal
+  return iv.toString("hex") + ":" + encrypted.toString("hex");
+}
+
 const {
 	SlashCommandBuilder,
 	ActionRowBuilder, ButtonBuilder, ButtonStyle
@@ -28,7 +51,7 @@ module.exports = {
               throw new Error('Failed to create session');
             }
       
-            const sessionKey = sessionResponse.data.session_key;
+            const sessionKey = encryptText(sessionResponse.data.session_key);
       
             // Step 2: Build the panel URL with session_key and discord_username
             const panelUrl = `${PANEL_URL}?key=${sessionKey}&discorduser=${discordUsername}`;

@@ -9,7 +9,7 @@ const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY; // Key from environment varia
 const IV_LENGTH = 16; // For AES, this is always 16 bytes
 
 // Decrypt password function
-function decryptPassword(text) {
+function decryptText(text) {
   const [iv, encryptedText] = text.split(":");
   const decipher = crypto.createDecipheriv(
     "aes-256-cbc",
@@ -33,12 +33,12 @@ const isMessageValid = async ({ message, address, signature }) => {
 };
 
 const refreshSessionTimeout = async (client, discordUsername, sessionKey) => {
-    await client.query(
-        `UPDATE validator_panel_session 
+  await client.query(
+    `UPDATE validator_panel_session 
          SET session_timeout = EXTRACT(EPOCH FROM NOW() + INTERVAL '30 minutes') 
          WHERE discord_username = $1 AND session_key = $2`,
-        [discordUsername, sessionKey]
-    );
+    [discordUsername, sessionKey]
+  );
 };
 
 module.exports = (client) => {
@@ -91,30 +91,30 @@ module.exports = (client) => {
     }
   });
 
-  // Confirm Ownership Of Wallet
   router.post("/confirmOwnership", async (req, res) => {
     try {
-      const { signedMessage, message, sessionKey, discordUsername, address } =
-        req.body;
+      const {
+        signedMessage,
+        message,
+        sessionKey: k,
+        discordUsername,
+        address,
+      } = req.body;
 
       // Step 1: Validate input
-      if (
-        !signedMessage ||
-        !message ||
-        !sessionKey ||
-        !discordUsername ||
-        !address
-      ) {
+      if (!signedMessage || !message || !k || !discordUsername || !address) {
         return res.status(400).json({ error: "Missing required fields" });
       }
+
+      const sessionKey = decryptText(k);
 
       // Step 2: Validate session
       const sessionResult = await client.query(
         `SELECT session_key 
-			 FROM validator_panel_session 
-			 WHERE discord_username = $1 
-			 AND session_key = $2 
-			 AND session_timeout > EXTRACT(EPOCH FROM NOW())`,
+         FROM validator_panel_session 
+         WHERE discord_username = $1 
+         AND session_key = $2 
+         AND session_timeout > EXTRACT(EPOCH FROM NOW())`,
         [discordUsername, sessionKey]
       );
 
@@ -143,8 +143,29 @@ module.exports = (client) => {
       );
 
       if (parseInt(addressExists.rows[0].count) > 0) {
+        // Update discord_username in the validator table
         await client.query(
           "UPDATE validator SET discord_username = $1 WHERE address = $2",
+          [discordUsername, address.toLowerCase()]
+        );
+      } else {
+        // Step 5: Address not found in validator table, check in validator_verified_wallet
+        const existingWallet = await client.query(
+          "SELECT discord_username FROM validator_verified_wallet WHERE address = $1",
+          [address.toLowerCase()]
+        );
+
+        if (existingWallet.rows.length > 0) {
+          // Delete existing record if found for a different discord username
+          await client.query(
+            "DELETE FROM validator_verified_wallet WHERE address = $1",
+            [address.toLowerCase()]
+          );
+        }
+
+        // Step 6: Insert new data into validator_verified_wallet
+        await client.query(
+          "INSERT INTO validator_verified_wallet (discord_username, address) VALUES ($1, $2)",
           [discordUsername, address.toLowerCase()]
         );
       }
@@ -164,13 +185,15 @@ module.exports = (client) => {
   // Get verified wallets route
   router.get("/getVerifiedWallets", async (req, res) => {
     try {
-      const { discord_username, session_key } = req.query;
+      const { discord_username, session_key: k } = req.query;
 
-      if (!discord_username || !session_key) {
+      if (!discord_username || !k) {
         return res
           .status(400)
           .json({ error: "discord_username and session_key are required" });
       }
+
+      const session_key = decryptText(k);
 
       // Step 1: Validate the session
       const sessionResult = await client.query(
@@ -189,7 +212,7 @@ module.exports = (client) => {
       // Refresh session timeout
       await refreshSessionTimeout(client, discord_username, session_key);
 
-      // Step 2: Fetch addresses and encrypted passwords tied to the discord_username
+      // Step 2: Fetch addresses and encrypted passwords tied to the discord_username from the validator table
       const addressResult = await client.query(
         `SELECT address, encrypted_password 
          FROM validator 
@@ -197,14 +220,28 @@ module.exports = (client) => {
         [discord_username]
       );
 
-      // Step 3: Decrypt the passwords and map to the addresses
-      const wallets = addressResult.rows.map((row) => ({
+      // Step 3: Fetch verified wallets from the validator_verified_wallet table
+      const verifiedWalletsResult = await client.query(
+        `SELECT discord_username, address 
+         FROM validator_verified_wallet 
+         WHERE discord_username = $1`,
+        [discord_username]
+      );
+
+      // Step 4: Decrypt the passwords and map to the addresses for the validator table
+      const validators = addressResult.rows.map((row) => ({
         address: row.address,
-        password: decryptPassword(row.encrypted_password),
+        password: decryptText(row.encrypted_password),
       }));
 
-      // Step 4: Return the addresses and decrypted passwords
-      res.status(200).json({ wallets });
+      // Step 5: Map verified wallets
+      const wallets = verifiedWalletsResult.rows.map((row) => ({
+        discord_username: row.discord_username,
+        address: row.address,
+      }));
+
+      // Step 6: Return the addresses and wallets
+      res.status(200).json({ validators, wallets });
     } catch (err) {
       console.error("Error fetching verified wallets:", err);
       res.status(500).json({ error: "Server error", details: err.message });
@@ -212,19 +249,21 @@ module.exports = (client) => {
   });
 
   router.get("/verifyWallet", async (req, res) => {
-    const { address, discord_username, session_key } = req.query;
-
-    if (!discord_username || !session_key) {
-      return res
-        .status(400)
-        .json({ error: "discord_username and session_key are required" });
-    }
-
-    if (!address) {
-      return res.status(400).json({ error: "Address is required" });
-    }
-
     try {
+      const { address, discord_username, session_key: k } = req.query;
+
+      if (!discord_username || !k) {
+        return res
+          .status(400)
+          .json({ error: "discord_username and session_key are required" });
+      }
+
+      const session_key = decryptText(k);
+
+      if (!address) {
+        return res.status(400).json({ error: "Address is required" });
+      }
+
       const sessionResult = await client.query(
         `SELECT session_key 
          FROM validator_panel_session 
@@ -240,7 +279,6 @@ module.exports = (client) => {
 
       // Refresh session timeout
       await refreshSessionTimeout(client, discord_username, session_key);
-
 
       const query = "SELECT COUNT(*) FROM validator WHERE address = $1";
       const result = await client.query(query, [address.toLowerCase()]);
