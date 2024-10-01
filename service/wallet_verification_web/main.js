@@ -22,6 +22,11 @@ let selectedAccount;
 let sessionKey;
 let discordUsername;
 
+function validate_txhash(txhash)
+{
+  return /^0x([A-Fa-f0-9]{64})$/.test(txhash);
+}
+
 async function init() {
   const providerOptions = {
     walletconnect: {
@@ -130,6 +135,14 @@ const refreshVerifiedWallets = async (
         "session-expired-message"
       );
       sessionExpiredMessage.style.display = "block"; // Unhide the message
+
+      // hide all-content
+      const allContent = document.getElementById(
+        "all-content"
+      );
+      allContent.style.display = "none"; // Unhide the message
+
+      
       return; // Exit the function
     }
 
@@ -149,7 +162,10 @@ const refreshVerifiedWallets = async (
     walletsContainer.innerHTML = "";
 
     // If no wallets are found, show a message or leave the table empty
-    if ((!data.validators || data.validators.length === 0) && (!data.wallets || data.wallets.length === 0) ) {
+    if (
+      (!data.validators || data.validators.length === 0) &&
+      (!data.wallets || data.wallets.length === 0)
+    ) {
       walletsContainer.innerHTML =
         '<tr><td colspan="2">No verified wallets found.</td></tr>';
       return;
@@ -169,15 +185,16 @@ const refreshVerifiedWallets = async (
 
     // Iterate over the wallets and append them to the table
     data.wallets?.forEach((wallet) => {
-        const clone = template.content.cloneNode(true);
-  
-        // Populate the template with wallet data (address and metadata)
-        clone.querySelector(".address").textContent = wallet.address + ' (Not a validator)';
-        clone.querySelector(".password").textContent = 'N/A';
-  
-        // Append the cloned row to the container
-        walletsContainer.appendChild(clone);
-      });
+      const clone = template.content.cloneNode(true);
+
+      // Populate the template with wallet data (address and metadata)
+      clone.querySelector(".address").textContent =
+        wallet.address + " (Not a validator)";
+      clone.querySelector(".password").textContent = "N/A";
+
+      // Append the cloned row to the container
+      walletsContainer.appendChild(clone);
+    });
   } catch (error) {
     console.error("Error refreshing verified wallets:", error.message);
 
@@ -274,6 +291,44 @@ async function onDisconnect() {
   document.querySelector("#connected").style.display = "none";
 }
 
+async function onSubmitTransaction() {
+    try {
+        const txhashInput = document.getElementById("tx-hash-input");
+        const txhash = txhashInput.value.trim();
+
+        // Step 1: Validate the transaction hash
+        if (!validate_txhash(txhash)) {
+            alert("Invalid transaction hash. Please enter a valid one.");
+            return; // Stop the function if the txhash is invalid
+        }
+
+        // Step 2: Make the POST request to submit the transaction
+        const response = await fetch(`${BASE_API_URL}/submitTransaction`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                session_key: sessionKey, // use the global sessionKey
+                discord_username: discordUsername, // use the global discordUsername
+                txhash: txhash,
+            }),
+        });
+
+        // Step 3: Handle the response
+        if (response.ok) {
+            const result = await response.json();
+            alert(result.message); // Show success or existing message
+        } else {
+            const errorResult = await response.json();
+            alert(`Error: ${errorResult.error || 'Failed to submit transaction'}`);
+        }
+    } catch (e) {
+        console.error("Error while submitting transaction", e);
+        alert("An unexpected error occurred. Please try again.");
+    }
+}
+
 /**
  * Main entry point.
  */
@@ -283,6 +338,10 @@ window.addEventListener("load", () => {
     await init();
   }, 1000);
   document.querySelector("#btn-connect").addEventListener("click", onConnect);
+  document
+    .querySelector("#btn-submit-tx")
+    .addEventListener("click", onSubmitTransaction);
+
   document
     .querySelector("#btn-disconnect")
     .addEventListener("click", onDisconnect);

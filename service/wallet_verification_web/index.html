@@ -55,105 +55,109 @@
         <div class="row">
             <div class="col-md-12">
                 <h1>MatroxDev's Validator Panel</h1>
-                <div class="ms-2">
+                <div class="m-2">
                     <strong>Discord User:</strong> <span id="url-discord-user"></span>
+                </div>
+
+                <div class="alert alert-danger ma-2" id="session-expired-message" style="display: none">
+                    Your session has expired. Please go back to Discord to initiate a new session using SlashCommand /openpanel.
                 </div>
                    
                 <hr>
-                <div id="content" class="container mt-4 w-100">
-                    <div id="prepare" class="mb-3">
-                        <button class="btn btn-primary " id="btn-connect">
-                            Connect wallet
-                        </button>
-                    </div>
-
-                    <div id="connected" style="display: none">
-                        <div class="row">
-                            <div class="col-12 col-md-6 mb-2">
-                                <button class="btn btn-danger" id="btn-disconnect">
-                                    Disconnect wallet
-                                </button>
-                            </div>
-                            <div class="col-12 col-md-6 mb-2">
-                                <div id="network">
-                                    <p class="mb-0">
-                                        <span id="selected-account"></span>
-                                        <button class="btn btn-primary" id="btn-verify">
-                                            Verify wallet
-                                        </button>
-                                    </p>
+                <div id="all-content">
+                    <div id="content" class="container mt-4 w-100">
+                        <div id="prepare" class="mb-3">
+                            <button class="btn btn-primary " id="btn-connect">
+                                Connect wallet
+                            </button>
+                        </div>
+    
+                        <div id="connected" style="display: none">
+                            <div class="row">
+                                <div class="col-12 col-md-6 mb-2">
+                                    <button class="btn btn-danger" id="btn-disconnect">
+                                        Disconnect wallet
+                                    </button>
+                                </div>
+                                <div class="col-12 col-md-6 mb-2">
+                                    <div id="network">
+                                        <p class="mb-0">
+                                            <span id="selected-account"></span>
+                                            <button class="btn btn-primary" id="btn-verify">
+                                                Verify wallet
+                                            </button>
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="container mt-2 section-container">
-                    <h3 >Verified Wallets</h3>
-                    <hr>
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th scope="col">Wallet</th>
-                                    <th scope="col">Dashboard Password</th>
-                                </tr>
-                            </thead>
-                            <tbody id="wallets">
-                                <!-- Verified wallets will be dynamically added here -->
-                            </tbody>
-                        </table>
+    
+                    <div class="container mt-2 section-container">
+                        <h3 >Verified Wallets</h3>
+                        <hr>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th scope="col">Wallet</th>
+                                        <th scope="col">Dashboard Password</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wallets">
+                                    <!-- Verified wallets will be dynamically added here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+    
+                    <div class="container mt-2 section-container">
+                        <h3>Your Contributions</h3>
+                        <hr>
+                        <div class="mb-3">
+                            <p>
+                                For every $5 worth of USDC on Polygon, BSC or Vitruveo, you will gain access to 28 days of
+                                the dashboard and UptimeRobot link. Please ensure that the wallet from which the funds come is from the verified wallets.
+                            </p>
+                            <p>
+                                Please send the transfer to the following address:
+                                <strong>0x440a948af13fe3b4dd1b341e2aa834f81bf6ff51</strong>
+                            </p>
+                            <ul>
+                                <li>Step 1: Complete the transfer to the specified address.</li>
+                                <li>Step 2: After the transfer is done, enter the transaction hash in the field below.</li>
+                                <li>Step 3: Press the submit button to complete the process.</li>
+                            </ul>
+                        </div>
+                        
+                
+                        <div class="d-flex gap-1 mb-1">
+                            <input type="text" class="form-control" id="tx-hash-input" placeholder="Transaction Hash" />
+                            <button class="btn btn-primary" id="btn-submit-tx">
+                                Submit
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th scope="col">Date</th>
+                                        <th scope="col">Wallet</th>
+                                        <th scope="col">Chain</th>
+                                        <th scope="col">TxHash</th>
+                                        <th scope="col">USD Value</th>
+                                        <th scope="col">Expiry</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="contributions">
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
-                <div class="container mt-2 section-container">
-                    <h3>Your Contributions</h3>
-                    <hr>
-                    <div class="mb-3">
-                        <p>
-                            For every $5 worth of USDC on Polygon, BSC or Vitruveo, you will gain access to 28 days of
-                            the dashboard and UptimeRobot link. Please ensure that the wallet from which the funds come is from the verified wallets.
-                        </p>
-                        <p>
-                            Please send the transfer to the following address:
-                            <strong>0x440a948af13fe3b4dd1b341e2aa834f81bf6ff51</strong>
-                        </p>
-                        <ul>
-                            <li>Step 1: Complete the transfer to the specified address.</li>
-                            <li>Step 2: After the transfer is done, enter the transaction hash in the field below.</li>
-                            <li>Step 3: Press the submit button to complete the process.</li>
-                        </ul>
-                    </div>
-                    
-            
-                    <div class="d-flex gap-1 mb-1">
-                        <input type="text" class="form-control" placeholder="Transaction Hash" />
-                        <button class="btn btn-primary" id="btn-submit-tx">
-                            Submit
-                        </button>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th scope="col">Date</th>
-                                    <th scope="col">Wallet</th>
-                                    <th scope="col">Chain</th>
-                                    <th scope="col">TxHash</th>
-                                    <th scope="col">USD Value</th>
-                                    <th scope="col">Expiry</th>
-                                </tr>
-                            </thead>
-                            <tbody id="contributions">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
 
-
-                <div class="alert alert-danger" id="session-expired-message" style="display: none">
-                    Your session has expired. Please go back to Discord to initiate a new session.
-                </div>
+                
 
 
                 <div class="container mt-2 section-container">

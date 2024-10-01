@@ -42,7 +42,6 @@ const refreshSessionTimeout = async (client, discordUsername, sessionKey) => {
 };
 
 module.exports = (client) => {
-  // Create session route
   router.post("/create_session", async (req, res) => {
     try {
       const { discord_username } = req.body;
@@ -182,7 +181,77 @@ module.exports = (client) => {
     }
   });
 
-  // Get verified wallets route
+  router.post("/submitTransaction", async (req, res) => {
+    try {
+      const { session_key: k, discord_username, txhash } = req.body;
+  
+      // Step 1: Validate input
+      if (!k || !discord_username || !txhash) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+  
+      const session_key = decryptText(k);
+  
+      // Step 2: Validate session
+      const sessionResult = await client.query(
+        `SELECT session_key 
+         FROM validator_panel_session 
+         WHERE discord_username = $1 
+         AND session_key = $2 
+         AND session_timeout > EXTRACT(EPOCH FROM NOW())`,
+        [discord_username, session_key]
+      );
+  
+      if (sessionResult.rows.length === 0) {
+        return res.status(403).json({ error: "Invalid or expired session" });
+      }
+  
+      // Refresh session timeout
+      await refreshSessionTimeout(client, discord_username, session_key);
+  
+      // Step 3: Check if the txhash already exists for the discord_username
+      const existingTx = await client.query(
+        `SELECT is_valid 
+         FROM validator_tx 
+         WHERE txhash = $1 AND discord_username = $2`,
+        [txhash, discord_username]
+      );
+  
+      if (existingTx.rows.length > 0) {
+        // Transaction hash already exists
+        const { is_valid } = existingTx.rows[0];
+  
+        if (is_valid) {
+          // If transaction is valid, return an error
+          return res.status(400).json({ error: "Transaction is already valid" });
+        } else {
+          // If not valid, set it as pending again for reprocessing
+          await client.query(
+            `UPDATE validator_tx 
+             SET is_pending = true 
+             WHERE txhash = $1 AND discord_username = $2`,
+            [txhash, discord_username]
+          );
+          return res.status(200).json({ message: "Transaction will be reprocessed" });
+        }
+      }
+  
+      // Step 4: Insert the new transaction into the validator_tx table
+      await client.query(
+        `INSERT INTO validator_tx (txhash, discord_username, is_pending) 
+         VALUES ($1, $2, true)`,
+        [txhash, discord_username]
+      );
+  
+      // Step 5: Return success response
+      res.status(200).json({ message: "Transaction submitted successfully" });
+    } catch (err) {
+      console.error("Error submitting transaction:", err);
+      res.status(500).json({ error: "Internal server error", details: err.message });
+    }
+  });
+  
+
   router.get("/getVerifiedWallets", async (req, res) => {
     try {
       const { discord_username, session_key: k } = req.query;
