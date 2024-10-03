@@ -79,7 +79,7 @@ const configureVerifyButton = () => {
   verifyButton.addEventListener("click", async () => {
     const message = `I am the owner of this wallet (Session Key: ${sessionKey})`;
     const web3 = new Web3(provider);
-    const signature = await web3.eth.personal.sign(message, selectedAccount);
+    const signature = await web3.eth.personal.sign(message, selectedAccount, "");
 
     const confirmResponse = await fetch(`${BASE_API_URL}/confirmOwnership`, {
       method: "POST",
