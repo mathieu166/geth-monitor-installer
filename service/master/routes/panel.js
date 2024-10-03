@@ -41,14 +41,18 @@ const refreshSessionTimeout = async (client, discordUsername, sessionKey) => {
   );
 };
 
-module.exports = (client) => {
+module.exports = (pool) => {
   router.post("/create_session", async (req, res) => {
-    try {
-      const { discord_username } = req.body;
+    const { discord_username } = req.body;
 
-      if (!discord_username) {
-        return res.status(400).json({ error: "discord_username is required" });
-      }
+    if (!discord_username) {
+      return res.status(400).json({ error: "discord_username is required" });
+    }
+
+    const client = await pool.connect(); // Get a client from the pool
+    try {
+      // Start a transaction
+      await client.query("BEGIN");
 
       // Step 1: Check if there's an active session (not timed out)
       const result = await client.query(
@@ -70,6 +74,9 @@ module.exports = (client) => {
           [existingSessionKey]
         );
 
+        // Commit the transaction
+        await client.query("COMMIT");
+
         return res.status(200).json({ session_key: existingSessionKey });
       }
 
@@ -82,28 +89,38 @@ module.exports = (client) => {
         [discord_username, newSessionKey]
       );
 
+      // Commit the transaction
+      await client.query("COMMIT");
+
       // Step 4: Return the new session_key
       res.status(200).json({ session_key: newSessionKey });
     } catch (err) {
+      await client.query("ROLLBACK"); // Rollback the transaction on error
       console.error("Error creating session:", err);
       res.status(500).json({ error: "Server error", details: err.message });
+    } finally {
+      client.release(); // Release the client back to the pool
     }
   });
 
   router.post("/confirmOwnership", async (req, res) => {
-    try {
-      const {
-        signedMessage,
-        message,
-        sessionKey: k,
-        discordUsername,
-        address,
-      } = req.body;
+    const {
+      signedMessage,
+      message,
+      sessionKey: k,
+      discordUsername,
+      address,
+    } = req.body;
 
-      // Step 1: Validate input
-      if (!signedMessage || !message || !k || !discordUsername || !address) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
+    // Step 1: Validate input
+    if (!signedMessage || !message || !k || !discordUsername || !address) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const client = await pool.connect(); // Get a client from the pool
+    try {
+      // Start a transaction
+      await client.query("BEGIN");
 
       const sessionKey = decryptText(k);
 
@@ -118,11 +135,9 @@ module.exports = (client) => {
       );
 
       if (sessionResult.rows.length === 0) {
+        await client.query("ROLLBACK");
         return res.status(403).json({ error: "Invalid or expired session" });
       }
-
-      // Refresh session timeout
-      await refreshSessionTimeout(client, discordUsername, sessionKey);
 
       // Step 3: Verify ownership (signature check)
       const isValid = await isMessageValid({
@@ -132,8 +147,12 @@ module.exports = (client) => {
       });
 
       if (!isValid) {
+        await client.query("ROLLBACK");
         return res.status(400).json({ error: "Message verification failed" });
       }
+
+      // Refresh session timeout
+      await refreshSessionTimeout(client, discordUsername, sessionKey);
 
       // Step 4: Check if the address is already in the `validator` table
       const addressExists = await client.query(
@@ -169,29 +188,41 @@ module.exports = (client) => {
         );
       }
 
+      // Commit the transaction
+      await client.query("COMMIT");
+
       // Step 7: Return success message
       return res
         .status(200)
         .json({ success: true, message: "Ownership confirmed" });
     } catch (err) {
+      await client.query("ROLLBACK"); // Rollback the transaction on error
+
       console.error("Error confirming ownership:", err);
       res
         .status(500)
         .json({ error: "Internal server error", details: err.message });
+    } finally {
+      client.release(); // Release the client back to the pool
     }
   });
 
   router.post("/submitTransaction", async (req, res) => {
+    const { session_key: k, discord_username, txhash } = req.body;
+
+    // Step 1: Validate input
+    if (!k || !discord_username || !txhash) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const client = await pool.connect(); // Get a client from the pool
+
     try {
-      const { session_key: k, discord_username, txhash } = req.body;
-  
-      // Step 1: Validate input
-      if (!k || !discord_username || !txhash) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-  
+      // Start a transaction
+      await client.query("BEGIN");
+
       const session_key = decryptText(k);
-  
+
       // Step 2: Validate session
       const sessionResult = await client.query(
         `SELECT session_key 
@@ -201,29 +232,37 @@ module.exports = (client) => {
          AND session_timeout > EXTRACT(EPOCH FROM NOW())`,
         [discord_username, session_key]
       );
-  
+
       if (sessionResult.rows.length === 0) {
+        await client.query("ROLLBACK"); // Rollback the transaction on error
+
         return res.status(403).json({ error: "Invalid or expired session" });
       }
-  
+
       // Refresh session timeout
       await refreshSessionTimeout(client, discord_username, session_key);
-  
+
       // Step 3: Check if the txhash already exists for the discord_username
       const existingTx = await client.query(
         `SELECT is_valid 
          FROM validator_tx 
-         WHERE txhash = $1 AND discord_username = $2`,
+         WHERE txhash = $1 AND discord_username = $2
+         `,
         [txhash, discord_username]
       );
-  
+
       if (existingTx.rows.length > 0) {
         // Transaction hash already exists
         const { is_valid } = existingTx.rows[0];
-  
+
         if (is_valid) {
+          // Commit the transaction
+          await client.query("COMMIT");
+
           // If transaction is valid, return an error
-          return res.status(400).json({ error: "Transaction is already valid" });
+          return res
+            .status(400)
+            .json({ error: "Transaction is already valid" });
         } else {
           // If not valid, set it as pending again for reprocessing
           await client.query(
@@ -232,35 +271,54 @@ module.exports = (client) => {
              WHERE txhash = $1 AND discord_username = $2`,
             [txhash, discord_username]
           );
-          return res.status(200).json({ message: "Transaction will be reprocessed" });
+
+          // Commit the transaction
+          await client.query("COMMIT");
+
+          return res
+            .status(200)
+            .json({ message: "Transaction will be reprocessed" });
         }
       }
-  
+
       // Step 4: Insert the new transaction into the validator_tx table
       await client.query(
         `INSERT INTO validator_tx (txhash, discord_username, is_pending) 
          VALUES ($1, $2, true)`,
         [txhash, discord_username]
       );
-  
+
+      // Commit the transaction
+      await client.query("COMMIT");
+
       // Step 5: Return success response
       res.status(200).json({ message: "Transaction submitted successfully" });
     } catch (err) {
+      await client.query("ROLLBACK"); // Rollback the transaction on error
+
       console.error("Error submitting transaction:", err);
-      res.status(500).json({ error: "Internal server error", details: err.message });
+      res
+        .status(500)
+        .json({ error: "Internal server error", details: err.message });
+    } finally {
+      client.release(); // Release the client back to the pool
     }
   });
-  
 
-  router.get("/getVerifiedWallets", async (req, res) => {
+  router.get("/getContributions", async (req, res) => {
+    const { discord_username, session_key: k } = req.query;
+
+    if (!discord_username || !k) {
+      return res
+        .status(400)
+        .json({ error: "discord_username and session_key are required" });
+    }
+
+    const client = await pool.connect(); // Get a client from the pool
+
     try {
-      const { discord_username, session_key: k } = req.query;
-
-      if (!discord_username || !k) {
-        return res
-          .status(400)
-          .json({ error: "discord_username and session_key are required" });
-      }
+      // Start a transaction
+      await client.query("BEGIN");
 
       const session_key = decryptText(k);
 
@@ -275,6 +333,112 @@ module.exports = (client) => {
       );
 
       if (sessionResult.rows.length === 0) {
+        await client.query("ROLLBACK"); // Rollback the transaction on error
+
+        return res.status(403).json({ error: "Invalid or expired session" });
+      }
+
+      // Refresh session timeout
+      await refreshSessionTimeout(client, discord_username, session_key);
+
+      const contributionsResults = await client.query(
+        `SELECT txdate, address, "chain", txhash, amount, additional_days, access_expiry
+        FROM validator_contribution
+        WHERE discord_username= $1
+        ORDER BY txdate DESC`,
+        [discord_username]
+      )
+
+      const pendingResults = await client.query(
+        `SELECT txhash, created_at, is_pending, is_valid, reason
+        FROM validator_tx
+        WHERE discord_username=$1
+          AND (is_pending = true or is_valid = false)
+         ORDER BY created_at DESC`,
+        [discord_username]
+      )
+
+      await client.query("COMMIT");
+
+      res.status(200).json({ contributions: contributionsResults.rows, pendingContributions: pendingResults.rows });
+    } catch (err) {
+      await client.query("ROLLBACK"); // Rollback the transaction on error
+
+      console.error("Error fetching contributions:", err);
+      res.status(500).json({ error: "Server error", details: err.message });
+    } finally {
+      client.release();
+    }
+  });
+
+  router.get("/getContributionSpecs", async (req, res) => {
+    const { discord_username, session_key: k } = req.query;
+
+    if (!discord_username || !k) {
+      return res
+        .status(400)
+        .json({ error: "discord_username and session_key are required" });
+    }
+
+    const client = await pool.connect(); // Get a client from the pool
+
+    try {
+      // Start a transaction
+      const session_key = decryptText(k);
+
+      // Step 1: Validate the session
+      const sessionResult = await client.query(
+        `SELECT session_key 
+         FROM validator_panel_session 
+         WHERE discord_username = $1 
+         AND session_key = $2 
+         AND session_timeout > EXTRACT(EPOCH FROM NOW())`,
+        [discord_username, session_key]
+      );
+
+      if (sessionResult.rows.length === 0) {
+        return res.status(403).json({ error: "Invalid or expired session" });
+      }
+
+      res.status(200).json({ contributions: contributionsResults.rows, pendingContributions: pendingResults.rows });
+    } catch (err) {
+      console.error("Error fetching contribution specs:", err);
+      res.status(500).json({ error: "Server error", details: err.message });
+    } finally {
+      client.release();
+    }
+  });
+
+  router.get("/getVerifiedWallets", async (req, res) => {
+    const { discord_username, session_key: k } = req.query;
+
+    if (!discord_username || !k) {
+      return res
+        .status(400)
+        .json({ error: "discord_username and session_key are required" });
+    }
+
+    const client = await pool.connect(); // Get a client from the pool
+
+    try {
+      // Start a transaction
+      await client.query("BEGIN");
+
+      const session_key = decryptText(k);
+
+      // Step 1: Validate the session
+      const sessionResult = await client.query(
+        `SELECT session_key 
+         FROM validator_panel_session 
+         WHERE discord_username = $1 
+         AND session_key = $2 
+         AND session_timeout > EXTRACT(EPOCH FROM NOW())`,
+        [discord_username, session_key]
+      );
+
+      if (sessionResult.rows.length === 0) {
+        await client.query("ROLLBACK"); // Rollback the transaction on error
+
         return res.status(403).json({ error: "Invalid or expired session" });
       }
 
@@ -309,29 +473,40 @@ module.exports = (client) => {
         address: row.address,
       }));
 
+      await client.query("COMMIT");
+
       // Step 6: Return the addresses and wallets
       res.status(200).json({ validators, wallets });
     } catch (err) {
+      await client.query("ROLLBACK"); // Rollback the transaction on error
+
       console.error("Error fetching verified wallets:", err);
       res.status(500).json({ error: "Server error", details: err.message });
+    } finally {
+      client.release();
     }
   });
 
   router.get("/verifyWallet", async (req, res) => {
-    try {
-      const { address, discord_username, session_key: k } = req.query;
+    const { address, discord_username, session_key: k } = req.query;
 
-      if (!discord_username || !k) {
-        return res
-          .status(400)
-          .json({ error: "discord_username and session_key are required" });
-      }
+    if (!discord_username || !k) {
+      return res
+        .status(400)
+        .json({ error: "discord_username and session_key are required" });
+    }
+
+    if (!address) {
+      return res.status(400).json({ error: "Address is required" });
+    }
+
+    const client = await pool.connect(); // Get a client from the pool
+
+    try {
+      // Start a transaction
+      await client.query("BEGIN");
 
       const session_key = decryptText(k);
-
-      if (!address) {
-        return res.status(400).json({ error: "Address is required" });
-      }
 
       const sessionResult = await client.query(
         `SELECT session_key 
@@ -343,6 +518,8 @@ module.exports = (client) => {
       );
 
       if (sessionResult.rows.length === 0) {
+        await client.query("ROLLBACK"); // Rollback the transaction on error
+
         return res.status(403).json({ error: "Invalid or expired session" });
       }
 
@@ -354,10 +531,16 @@ module.exports = (client) => {
 
       const found = parseInt(result.rows[0].count) > 0;
 
+      await client.query("COMMIT");
+
       res.json({ found });
     } catch (error) {
+      await client.query("ROLLBACK"); // Rollback the transaction on error
+
       console.error("Error verifying wallet:", error);
       res.status(500).json({ error: "Internal server error" });
+    } finally {
+      client.release();
     }
   });
   return router;

@@ -1,8 +1,8 @@
 require('dotenv').config();
-const { Client } = require('pg');
+const { Pool } = require('pg');
 const ethers = require('ethers');
 
-const client = new Client({
+const pool = new Pool({
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
     database: process.env.DB_NAME,
@@ -10,34 +10,19 @@ const client = new Client({
     port: parseInt(process.env.DB_PORT, 10),
 });
 
-// Connect to PostgreSQL
-client.connect();
-
 // Configuration for chains and USDC addresses
-const chains = [
-    {
-        name: 'polygon',
-        usdcAddress: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
-        rpcUrl: 'https://polygon-rpc.com'
-    },
-    {
-        name: 'bsc',
-        usdcAddress: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
-        rpcUrl: 'https://bscrpc.com'
-    },
-    {
-        name: 'vitruveo',
-        usdcAddress: '0xbCfB3FCa16b12C7756CD6C24f1cC0AC0E38569CF',
-        rpcUrl: 'https://rpc.vitruveo.xyz/'
-    }
-];
+const {chains, recipients} = require('./specs');
 
-const DEFAULT_ACCESS_EXPIRY = 1730419200; //Nov 1st
-const ALLOWED_RECIPIENTS = ['0x440a948af13fe3b4dd1b341e2aa834f81bf6ff51']
+const DEFAULT_ACCESS_EXPIRY = 1730419200; // Nov 1st
+const ALLOWED_RECIPIENTS = recipients;
 
 async function checkPendingTransactions() {
+    const client = await pool.connect(); // Get a client from the pool
     try {
-        // Step 1: Select all pending transactions
+        // Start a transaction
+        await client.query('BEGIN');
+
+        // Step 1: Select all pending transactions with FOR UPDATE to lock the rows
         const res = await client.query('SELECT * FROM validator_tx WHERE is_pending = true FOR UPDATE');
         const pendingTxs = res.rows;
 
@@ -52,19 +37,17 @@ async function checkPendingTransactions() {
                 if (txDetails) {
                     txDetailsFound = true;
                     const { from, to, blockNumber, data } = txDetails;
-                    
-                    const recipient = extractRecipientAddress(data)
-                    
+                    const recipient = extractRecipientAddress(data);
 
                     // Step 3: Check if the "to" address is the USDC address for the chain
                     if (to.toLowerCase() === chain.usdcAddress.toLowerCase() && ALLOWED_RECIPIENTS.includes(recipient.toLowerCase())) {
                         // Extract the amount of USDC from the transaction input
-                        const amount = extractUsdcAmount(data);
+                        const amount = extractUsdcAmount(data, chain.decimal);
 
                         // Step 4: Check if the "from" address is in the verified wallets
                         const verifiedRes = await client.query(
                             'SELECT * FROM validator_verified_wallet WHERE address = $1 AND discord_username = $2',
-                            [from, discord_username]
+                            [from.toLowerCase(), discord_username]
                         );
 
                         if (verifiedRes.rows.length > 0) {
@@ -72,14 +55,19 @@ async function checkPendingTransactions() {
                             const txDate = await getTransactionDate(chain.rpcUrl, blockNumber);
 
                             // Step 6: Transaction is valid
-                            await markTransactionAsValid(txhash, discord_username, chain.name, amount, txDate);
+                            await markTransactionAsValid(client, txhash, discord_username, chain.name, amount, txDate, from);
                         } else {
                             // Transaction is not valid
-                            await markTransactionAsInvalid(txhash);
+                            await markTransactionAsInvalid(client, txhash, "Unverified Fund Source");
                         }
                     } else {
-                        // Transaction is not valid
-                        await markTransactionAsInvalid(txhash);
+                        if(to.toLowerCase() !== chain.usdcAddress.toLowerCase()){
+                            await markTransactionAsInvalid(client, txhash, "Invalid Token");
+                        } else if(!ALLOWED_RECIPIENTS.includes(recipient.toLowerCase())){
+                            await markTransactionAsInvalid(client, txhash, "Invalid Recipient");
+                        } else {
+                            await markTransactionAsInvalid(client, txhash, "Transaction Invalid");
+                        }
                     }
                     break; // Exit after processing the transaction
                 }
@@ -87,11 +75,17 @@ async function checkPendingTransactions() {
 
             // If no transaction details were found for any chain, mark it as invalid
             if (!txDetailsFound) {
-                await markTransactionAsInvalid(txhash);
+                await markTransactionAsInvalid(client, txhash, "Transaction Not Found");
             }
         }
+
+        // Commit the transaction
+        await client.query('COMMIT');
     } catch (error) {
         console.error('Error while checking pending transactions:', error);
+        await client.query('ROLLBACK'); // Rollback the transaction on error
+    } finally {
+        client.release(); // Release the client back to the pool
     }
 }
 
@@ -99,6 +93,7 @@ async function fetchTransactionDetails(rpcUrl, txhash) {
     try {
         const provider = new ethers.JsonRpcProvider(rpcUrl);
         const tx = await provider.getTransaction(txhash);
+        console.log(tx)
         return tx ? { from: tx.from, to: tx.to, blockNumber: tx.blockNumber, data: tx.data } : null;
     } catch (error) {
         console.error(`Error fetching transaction ${txhash} from ${rpcUrl}:`, error);
@@ -108,7 +103,7 @@ async function fetchTransactionDetails(rpcUrl, txhash) {
 
 async function getTransactionDate(rpcUrl, blockNumber) {
     try {
-        const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
         const block = await provider.getBlock(blockNumber);
         return block.timestamp; // Return the block timestamp
     } catch (error) {
@@ -117,31 +112,24 @@ async function getTransactionDate(rpcUrl, blockNumber) {
     }
 }
 
-function extractUsdcAmount(inputData) {
-    const amountHex = inputData.slice(-64); 
-
-    // Convert hex to decimal
+function extractUsdcAmount(inputData, decimal) {
+    const amountHex = inputData.slice(-64);
     const amountWei = BigInt(`0x${amountHex}`); // Use BigInt for large numbers
-
-    const amountUsdc = ethers.formatUnits(amountWei, 18); 
-
+    const amountUsdc = ethers.formatUnits(amountWei, decimal); // Convert to USDC units
     return amountUsdc;
 }
 
 function extractRecipientAddress(inputData) {
-    // The recipient address is usually located at the start of the input data
     const recipientHex = inputData.slice(34, 74); // Extract 40 hex characters (20 bytes) for the address
     return `0x${recipientHex}`; // Return the address with "0x" prefix
 }
 
-
-async function markTransactionAsValid(txhash, discord_username, chain, amount, txDate) {
-    const accessExpiry = await calculateAccessExpiry(discord_username, amount);
-
+async function markTransactionAsValid(client, txhash, discord_username, chain, amount, txDate, from) {
+    const {accessExpiry, additionalDays} = await calculateAccessExpiry(client, discord_username, amount);
     await client.query(
-        `INSERT INTO validator_contribution (txdate, address, "chain", txhash, amount, access_expiry, discord_username)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [txDate, discord_username, chain, txhash, amount, accessExpiry, discord_username]
+        `INSERT INTO validator_contribution (txdate, address, "chain", txhash, amount, access_expiry, discord_username, additional_days)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [txDate, from, chain, txhash, amount, accessExpiry, discord_username, additionalDays]
     );
 
     // Mark the transaction as valid and not pending
@@ -153,16 +141,15 @@ async function markTransactionAsValid(txhash, discord_username, chain, amount, t
     console.log(`Transaction ${txhash} is valid and recorded.`);
 }
 
-async function markTransactionAsInvalid(txhash) {
+async function markTransactionAsInvalid(client, txhash, reason) {
     await client.query(
-        'UPDATE validator_tx SET is_pending = false, is_valid = false WHERE txhash = $1',
-        [txhash]
+        'UPDATE validator_tx SET is_pending = false, is_valid = false, reason=$2 WHERE txhash = $1',
+        [txhash, reason]
     );
     console.log(`Transaction ${txhash} is marked as invalid.`);
 }
 
-async function calculateAccessExpiry(discord_username, amount) {
-    // Fetch both the current epoch time from the database and the last access_expiry
+async function calculateAccessExpiry(client, discord_username, amount) {
     const res = await client.query(
         `SELECT 
             GREATEST(COALESCE(MAX(access_expiry), $2), EXTRACT(EPOCH FROM NOW())) AS last_access_expiry
@@ -171,16 +158,11 @@ async function calculateAccessExpiry(discord_username, amount) {
         [discord_username, DEFAULT_ACCESS_EXPIRY]
     );
 
-    // Get the last access expiry, which is either the highest of the last expiry or the current epoch time
     let lastAccessExpiry = res.rows[0].last_access_expiry;
+    const additionalDays = Math.floor((amount / 5.0) * 28); // 28 days for every 5 USDC
 
-    // Calculate additional days based on the USDC amount
-    const additionalDays = Math.floor(amount / 5.0) * 28; // 28 days for every 5 USDC
-
-    // Return the new access expiry by adding the additional days (converted to seconds)
-    return lastAccessExpiry + additionalDays * 24 * 60 * 60; // Convert days to seconds
+    return { accessExpiry : parseInt(lastAccessExpiry) + (additionalDays * 24 * 60 * 60), additionalDays }; // Convert days to seconds
 }
-
 
 // Main loop
 (async function main() {
@@ -189,4 +171,3 @@ async function calculateAccessExpiry(discord_username, amount) {
         await new Promise(resolve => setTimeout(resolve, 5000));
     }
 })();
-

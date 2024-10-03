@@ -22,8 +22,7 @@ let selectedAccount;
 let sessionKey;
 let discordUsername;
 
-function validate_txhash(txhash)
-{
+function validate_txhash(txhash) {
   return /^0x([A-Fa-f0-9]{64})$/.test(txhash);
 }
 
@@ -56,7 +55,8 @@ async function init() {
   }
 
   if (key && discordUser) {
-    refreshVerifiedWallets(discordUser, key);
+    refreshVerifiedWallets();
+    refreshContributions();
   }
 
   configureVerifyButton();
@@ -98,7 +98,7 @@ const configureVerifyButton = () => {
     if (confirmResponse.ok) {
       await confirmResponse.json();
       setTimeout(() => {
-        refreshVerifiedWallets(discordUsername, sessionKey);
+        refreshVerifiedWallets();
       }, 500);
     } else {
       console.error("Error confirming ownership:", confirmResponse.statusText);
@@ -106,16 +106,11 @@ const configureVerifyButton = () => {
   });
 };
 
-const refreshVerifiedWallets = async (
-  discordUser,
-  key,
-  retries = 3,
-  delay = 500
-) => {
+const refreshVerifiedWallets = async (retries = 3, delay = 500) => {
   try {
     // Fetch verified wallets for the discord user
     const response = await fetch(
-      `${BASE_API_URL}/getVerifiedWallets?discord_username=${discordUser}&session_key=${key}`,
+      `${BASE_API_URL}/getVerifiedWallets?discord_username=${discordUsername}&session_key=${sessionKey}`,
       {
         method: "GET",
         headers: {
@@ -137,12 +132,9 @@ const refreshVerifiedWallets = async (
       sessionExpiredMessage.style.display = "block"; // Unhide the message
 
       // hide all-content
-      const allContent = document.getElementById(
-        "all-content"
-      );
+      const allContent = document.getElementById("all-content");
       allContent.style.display = "none"; // Unhide the message
 
-      
       return; // Exit the function
     }
 
@@ -175,9 +167,44 @@ const refreshVerifiedWallets = async (
     data.validators?.forEach((wallet) => {
       const clone = template.content.cloneNode(true);
 
-      // Populate the template with wallet data (address and metadata)
-      clone.querySelector(".address").textContent = wallet.address;
-      clone.querySelector(".password").textContent = wallet.password;
+      // Populate the template with wallet data (address and password)
+      const addressElement = clone.querySelector(".address");
+      const passwordElement = clone.querySelector(".password");
+
+      // Set the text content
+      addressElement.textContent = wallet.address + "  ";
+
+      // Set the password content and append the clipboard icon
+      const passwordContainer = document.createElement("span");
+      passwordContainer.textContent = wallet.password;
+
+      // Add copy icon to the password field
+      const copyIcon = document.createElement("i");
+      copyIcon.classList.add("bi", "bi-clipboard"); // Bootstrap clipboard icon
+      passwordContainer.appendChild(copyIcon);
+
+      passwordElement.appendChild(passwordContainer);
+
+      // Add click event to copy the full password to clipboard
+      passwordElement.addEventListener("click", () => {
+        navigator.clipboard
+          .writeText(wallet.password)
+          .then(() => {
+            // Use the reusable toast function to notify copy success
+            showToast("Password copied to clipboard!");
+          })
+          .catch((err) => {
+            console.error("Failed to copy the password: ", err);
+          });
+      });
+
+      // Create a new span element for the badge
+      const badgeSpan = document.createElement("span");
+      badgeSpan.classList.add("badge", "text-bg-success", "ms-2"); // Add classes
+      badgeSpan.textContent = "Validator"; // Set the text content
+
+      // Append the badge after the address text
+      addressElement.appendChild(badgeSpan);
 
       // Append the cloned row to the container
       walletsContainer.appendChild(clone);
@@ -188,8 +215,7 @@ const refreshVerifiedWallets = async (
       const clone = template.content.cloneNode(true);
 
       // Populate the template with wallet data (address and metadata)
-      clone.querySelector(".address").textContent =
-        wallet.address + " (Not a validator)";
+      clone.querySelector(".address").textContent = wallet.address;
       clone.querySelector(".password").textContent = "N/A";
 
       // Append the cloned row to the container
@@ -201,7 +227,7 @@ const refreshVerifiedWallets = async (
     if (retries > 0) {
       console.log(`Retrying... (${retries} attempts left)`);
       setTimeout(() => {
-        refreshVerifiedWallets(discordUser, key, retries - 1, delay);
+        refreshVerifiedWallets(retries - 1, delay);
       }, delay);
     } else {
       // If retries are exhausted, display an error message
@@ -244,6 +270,182 @@ async function refreshAccountData() {
   document.querySelector("#btn-connect").removeAttribute("disabled");
 }
 
+function showToast(message) {
+  const toastElement = document.getElementById("toast");
+
+  // Set the message inside the toast body (optional if you want dynamic messages)
+  const toastBody = toastElement.querySelector(".toast-body");
+  if (toastBody) {
+    toastBody.textContent = message;
+  }
+
+  // Create a new Bootstrap toast instance and show it
+  const toast = new bootstrap.Toast(toastElement);
+  toast.show();
+}
+
+async function refreshContributions() {
+  const response = await fetch(
+    `${BASE_API_URL}/getContributions?discord_username=${discordUsername}&session_key=${sessionKey}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  if (response.ok) {
+    const data = await response.json();
+
+    if (data.contributions) {
+      const template = document.querySelector("#template-contributions");
+      const contributionsContainer = document.querySelector("#contributions");
+
+      // Clear any previously loaded wallets
+      contributionsContainer.innerHTML = "";
+
+      if (data.contributions.length === 0) {
+        contributionsContainer.innerHTML =
+          '<tr><td colspan="7" style="text-align: center">No contributions found.</td></tr>';
+      } else {
+        data.contributions?.forEach((contribution) => {
+          const clone = template.content.cloneNode(true);
+
+          const txhashElement = clone.querySelector(".contribution-txhash");
+
+          // Truncate the displayed txhash
+          const truncatedTxhash = `${contribution.txhash.slice(
+            0,
+            6
+          )}...${contribution.txhash.slice(-10)}`;
+          txhashElement.textContent = truncatedTxhash;
+
+          // Add a copy icon (optional if not using the icon in the HTML template)
+          const copyIcon = document.createElement("i");
+          copyIcon.classList.add("bi", "bi-clipboard"); // Bootstrap clipboard icon
+          txhashElement.appendChild(copyIcon);
+
+          // Add click event to copy the full txhash to clipboard
+          txhashElement.addEventListener("click", () => {
+            navigator.clipboard
+              .writeText(contribution.txhash)
+              .then(() => {
+                // Use the reusable toast function
+                showToast("Transaction hash copied to clipboard!");
+              })
+              .catch((err) => {
+                console.error("Failed to copy the txhash: ", err);
+              });
+          });
+
+          clone.querySelector(".contribution-date").textContent = new Date(
+            contribution.txdate * 1000
+          ).toLocaleString();
+          clone.querySelector(".contribution-address").textContent =
+            contribution.address;
+          clone.querySelector(".contribution-chain").textContent =
+            contribution.chain;
+          clone.querySelector(".contribution-amount").textContent =
+            parseFloat(contribution.amount).toFixed(2) + " $";
+          clone.querySelector(".contribution-additionalDays").textContent =
+            contribution.additional_days;
+          clone.querySelector(".contribution-expiry").textContent = new Date(
+            contribution.access_expiry * 1000
+          ).toLocaleString();
+
+          // Append the cloned row to the container
+          contributionsContainer.appendChild(clone);
+        });
+      }
+    }
+
+    if (data.pendingContributions) {
+      const template = document.querySelector("#template-pendingContributions");
+      const contributionsContainer = document.querySelector(
+        "#pendingContributions"
+      );
+
+      // Clear any previously loaded wallets
+      contributionsContainer.innerHTML = "";
+
+      if (data.pendingContributions.length === 0) {
+        contributionsContainer.innerHTML =
+          '<tr><td colspan="4" style="text-align: center">No pending contributions found.</td></tr>';
+      } else {
+        let refreshRequired = false;
+        data.pendingContributions?.forEach((contribution) => {
+          const clone = template.content.cloneNode(true);
+          const txhashElement = clone.querySelector(".contribution-txhash");
+
+          // Truncate the displayed txhash
+          const truncatedTxhash = `${contribution.txhash.slice(
+            0,
+            6
+          )}...${contribution.txhash.slice(-10)}`;
+          txhashElement.textContent = truncatedTxhash;
+
+          // Add a copy icon (optional if not using the icon in the HTML template)
+          const copyIcon = document.createElement("i");
+          copyIcon.classList.add("bi", "bi-clipboard"); // Bootstrap clipboard icon
+          txhashElement.appendChild(copyIcon);
+
+          // Add click event to copy the full txhash to clipboard
+          txhashElement.addEventListener("click", () => {
+            navigator.clipboard
+              .writeText(contribution.txhash)
+              .then(() => {
+                // Use the reusable toast function
+                showToast("Transaction hash copied to clipboard!");
+              })
+              .catch((err) => {
+                console.error("Failed to copy the txhash: ", err);
+              });
+          });
+
+          clone.querySelector(".contribution-date").textContent = new Date(
+            contribution.created_at * 1000
+          ).toLocaleString();
+          clone.querySelector(".contribution-status").textContent =
+            contribution.is_pending
+              ? "Pending"
+              : !contribution.is_valid
+              ? contribution.reason
+              : "";
+
+          if (contribution.is_pending) {
+            const spinner = document.createElement("span");
+            spinner.classList.add(
+              "spinner-border",
+              "spinner-border-sm",
+              "ms-1"
+            );
+            spinner.setAttribute("role", "status"); // Accessibility
+
+            // Optionally, you can add spinner text for accessibility (screen readers)
+            const spinnerText = document.createElement("span");
+            spinnerText.classList.add("visually-hidden");
+            spinnerText.textContent = "Loading...";
+
+            spinner.appendChild(spinnerText); // Append visually-hidden text for accessibility
+            clone.querySelector(".contribution-status").appendChild(spinner);
+          }
+
+          if (contribution.is_pending) {
+            refreshRequired = true;
+          }
+
+          // Append the cloned row to the container
+          contributionsContainer.appendChild(clone);
+        });
+
+        if (refreshRequired) {
+          setTimeout(refreshContributions, 2000);
+        }
+      }
+    }
+  }
+}
+
 function setupProviderListeners() {
   if (provider) {
     provider.on("accountsChanged", () => {
@@ -279,54 +481,59 @@ async function onConnect() {
 /**
  * Disconnect wallet button pressed.
  */
-async function onDisconnect() {
-  if (provider && provider.close) {
-    await provider.close();
-    await web3Modal.clearCachedProvider();
-    provider = null;
-  }
+// async function onDisconnect() {
+//   if (provider && provider.close) {
+//     await provider.close();
+//     await web3Modal.clearCachedProvider();
+//     provider = null;
+//   }
 
-  selectedAccount = null;
-  document.querySelector("#prepare").style.display = "block";
-  document.querySelector("#connected").style.display = "none";
-}
+//   selectedAccount = null;
+//   document.querySelector("#prepare").style.display = "block";
+//   document.querySelector("#connected").style.display = "none";
+// }
 
 async function onSubmitTransaction() {
-    try {
-        const txhashInput = document.getElementById("tx-hash-input");
-        const txhash = txhashInput.value.trim();
+  try {
+    const txhashInput = document.getElementById("tx-hash-input");
+    const txhash = txhashInput.value.trim();
 
-        // Step 1: Validate the transaction hash
-        if (!validate_txhash(txhash)) {
-            alert("Invalid transaction hash. Please enter a valid one.");
-            return; // Stop the function if the txhash is invalid
-        }
-
-        // Step 2: Make the POST request to submit the transaction
-        const response = await fetch(`${BASE_API_URL}/submitTransaction`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                session_key: sessionKey, // use the global sessionKey
-                discord_username: discordUsername, // use the global discordUsername
-                txhash: txhash,
-            }),
-        });
-
-        // Step 3: Handle the response
-        if (response.ok) {
-            const result = await response.json();
-            alert(result.message); // Show success or existing message
-        } else {
-            const errorResult = await response.json();
-            alert(`Error: ${errorResult.error || 'Failed to submit transaction'}`);
-        }
-    } catch (e) {
-        console.error("Error while submitting transaction", e);
-        alert("An unexpected error occurred. Please try again.");
+    // Step 1: Validate the transaction hash
+    if (!validate_txhash(txhash)) {
+      showToast("Invalid transaction hash. Please enter a valid one.");
+      return; // Stop the function if the txhash is invalid
     }
+
+    // Step 2: Make the POST request to submit the transaction
+    let response = await fetch(`${BASE_API_URL}/submitTransaction`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        session_key: sessionKey, // use the global sessionKey
+        discord_username: discordUsername, // use the global discordUsername
+        txhash: txhash,
+      }),
+    });
+
+    // Step 3: Handle the response
+    if (response.ok) {
+      let result = await response.json();
+      showToast(result.message);
+      txhashInput.value = "";
+
+      await refreshContributions();
+    } else {
+      const errorResult = await response.json();
+      showToast(
+        `Error: ${errorResult.error || "Failed to submit transaction"}`
+      );
+    }
+  } catch (e) {
+    console.error("Error while submitting transaction", e);
+    showToast("An unexpected error occurred. Please try again.");
+  }
 }
 
 /**
@@ -343,6 +550,18 @@ window.addEventListener("load", () => {
     .addEventListener("click", onSubmitTransaction);
 
   document
-    .querySelector("#btn-disconnect")
-    .addEventListener("click", onDisconnect);
+    .getElementById("tx-hash-input")
+    .addEventListener("keydown", function (event) {
+      // Check if the pressed key is "Enter"
+      if (event.key === "Enter") {
+        // Prevent the default form submission if the input is inside a form
+        event.preventDefault();
+
+        // Call the function when "Enter" is pressed
+        onSubmitTransaction();
+      }
+    });
+  // document
+  //   .querySelector("#btn-disconnect")
+  //   .addEventListener("click", onDisconnect);
 });
