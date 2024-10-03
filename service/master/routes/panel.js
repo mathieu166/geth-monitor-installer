@@ -247,6 +247,7 @@ module.exports = (pool) => {
         `SELECT is_valid 
          FROM validator_tx 
          WHERE txhash = $1 AND discord_username = $2
+         FOR UPDATE
          `,
         [txhash, discord_username]
       );
@@ -268,7 +269,7 @@ module.exports = (pool) => {
           await client.query(
             `UPDATE validator_tx 
              SET is_pending = true 
-             WHERE txhash = $1 AND discord_username = $2`,
+             WHERE txhash = $1 AND discord_username = $2 AND is_valid = false`,
             [txhash, discord_username]
           );
 

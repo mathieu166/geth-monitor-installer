@@ -62,15 +62,15 @@ async function init() {
   configureVerifyButton();
 
   // Check if a cached provider exists
-  const cachedProvider = web3Modal.cachedProvider;
-  if (cachedProvider) {
-    try {
-      provider = await web3Modal.connect();
-      setupProviderListeners(); // Set up event listeners for provider
-      await refreshAccountData();
-      await fetchAccountData();
-    } catch (e) {}
-  }
+  // const cachedProvider = web3Modal.cachedProvider;
+  // if (cachedProvider) {
+  //   try {
+  //     provider = await web3Modal.connect();
+  //     setupProviderListeners(); // Set up event listeners for provider
+  //     await refreshAccountData();
+  //     await fetchAccountData();
+  //   } catch (e) {}
+  // }
 }
 
 const configureVerifyButton = () => {
@@ -251,6 +251,14 @@ async function fetchAccountData() {
   const accounts = await web3.eth.getAccounts();
 
   selectedAccount = accounts[0];
+
+  if (!selectedAccount || selectedAccount == "") {
+    await onDisconnect();
+    document.querySelector("#prepare").style.display = "block";
+    document.querySelector("#connected").style.display = "none";
+    return;
+  }
+
   document.querySelector("#selected-account").textContent = selectedAccount;
 
   document.querySelector("#prepare").style.display = "none";
@@ -370,7 +378,7 @@ async function refreshContributions() {
 
       if (data.pendingContributions.length === 0) {
         contributionsContainer.innerHTML =
-          '<tr><td colspan="4" style="text-align: center">No pending contributions found.</td></tr>';
+          '<tr><td colspan="3" style="text-align: center">No pending contributions found.</td></tr>';
       } else {
         let refreshRequired = false;
         data.pendingContributions?.forEach((contribution) => {
@@ -467,7 +475,6 @@ function setupProviderListeners() {
  */
 async function onConnect() {
   try {
-    console.log("onConnect");
     provider = await web3Modal.connect();
     setupProviderListeners(); // Set up event listeners for provider
   } catch (e) {
@@ -481,21 +488,22 @@ async function onConnect() {
 /**
  * Disconnect wallet button pressed.
  */
-// async function onDisconnect() {
-//   if (provider && provider.close) {
-//     await provider.close();
-//     await web3Modal.clearCachedProvider();
-//     provider = null;
-//   }
+async function onDisconnect() {
+  if (provider && provider.close) {
+    await provider.close();
+    await web3Modal.clearCachedProvider();
+    provider = null;
+  }
 
-//   selectedAccount = null;
-//   document.querySelector("#prepare").style.display = "block";
-//   document.querySelector("#connected").style.display = "none";
-// }
+  selectedAccount = null;
+  document.querySelector("#prepare").style.display = "block";
+  document.querySelector("#connected").style.display = "none";
+}
 
 async function onSubmitTransaction() {
+  const txhashInput = document.getElementById("tx-hash-input");
+  const submitBtn = document.getElementById("btn-submit-tx");
   try {
-    const txhashInput = document.getElementById("tx-hash-input");
     const txhash = txhashInput.value.trim();
 
     // Step 1: Validate the transaction hash
@@ -503,6 +511,9 @@ async function onSubmitTransaction() {
       showToast("Invalid transaction hash. Please enter a valid one.");
       return; // Stop the function if the txhash is invalid
     }
+
+    txhashInput.disabled = true;
+    submitBtn.disabled = true;
 
     // Step 2: Make the POST request to submit the transaction
     let response = await fetch(`${BASE_API_URL}/submitTransaction`, {
@@ -521,7 +532,6 @@ async function onSubmitTransaction() {
     if (response.ok) {
       let result = await response.json();
       showToast(result.message);
-      txhashInput.value = "";
 
       await refreshContributions();
     } else {
@@ -533,6 +543,12 @@ async function onSubmitTransaction() {
   } catch (e) {
     console.error("Error while submitting transaction", e);
     showToast("An unexpected error occurred. Please try again.");
+  } finally {
+    setTimeout(() => {
+      txhashInput.value = "";
+      txhashInput.disabled = false;
+      submitBtn.disabled = false;
+    }, 1000);
   }
 }
 

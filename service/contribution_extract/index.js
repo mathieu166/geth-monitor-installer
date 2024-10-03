@@ -23,7 +23,7 @@ async function checkPendingTransactions() {
         await client.query('BEGIN');
 
         // Step 1: Select all pending transactions with FOR UPDATE to lock the rows
-        const res = await client.query('SELECT * FROM validator_tx WHERE is_pending = true FOR UPDATE');
+        const res = await client.query('SELECT * FROM validator_tx WHERE is_pending = true and is_valid = false FOR UPDATE');
         const pendingTxs = res.rows;
 
         // Step 2: Process each pending transaction
