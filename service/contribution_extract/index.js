@@ -93,7 +93,7 @@ async function fetchTransactionDetails(rpcUrl, txhash) {
     try {
         const provider = new ethers.JsonRpcProvider(rpcUrl);
         const tx = await provider.getTransaction(txhash);
-        console.log(tx)
+
         return tx ? { from: tx.from, to: tx.to, blockNumber: tx.blockNumber, data: tx.data } : null;
     } catch (error) {
         console.error(`Error fetching transaction ${txhash} from ${rpcUrl}:`, error);
