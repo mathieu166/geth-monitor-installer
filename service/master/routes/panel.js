@@ -4,6 +4,8 @@ const { verifyMessage } = require("ethers");
 const router = express.Router(); // Create a router instance
 
 const crypto = require("crypto");
+const contributionSpecs  = require("../../contribution_extract/specs");
+
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY; // Key from environment variable
 const IV_LENGTH = 16; // For AES, this is always 16 bytes
@@ -263,7 +265,7 @@ module.exports = (pool) => {
           // If transaction is valid, return an error
           return res
             .status(400)
-            .json({ error: "Transaction is already valid" });
+            .json({ error: "Transaction already submitted!" });
         } else {
           // If not valid, set it as pending again for reprocessing
           await client.query(
@@ -401,7 +403,7 @@ module.exports = (pool) => {
         return res.status(403).json({ error: "Invalid or expired session" });
       }
 
-      res.status(200).json({ contributions: contributionsResults.rows, pendingContributions: pendingResults.rows });
+      res.status(200).json(contributionSpecs);
     } catch (err) {
       console.error("Error fetching contribution specs:", err);
       res.status(500).json({ error: "Server error", details: err.message });

@@ -107,6 +107,7 @@
             color: #0d6efd;
             /* Change icon color on hover */
         }
+
     </style>
 
 </head>
@@ -125,7 +126,7 @@
 
         <hr>
         <div id="all-content">
-            
+
 
             <div class="container mt-2 section-container">
                 <h3>Verified Wallets</h3>
@@ -150,12 +151,12 @@
                                 </button>
                             </div>
                         </div>
-        
+
                         <div id="connected" style="display: none; width: 100%;">
-                            <div id="network"  class="mb-1 d-flex justify-content-end w-100">
-                                    <button class="btn btn-outline-secondary" id="btn-verify">
-                                        Verify: <span id="selected-account" class="badge badge-primary"></span>
-                                    </button>
+                            <div id="network" class="mb-1 d-flex justify-content-end w-100">
+                                <button class="btn btn-outline-secondary disable-on-action" id="btn-verify">
+                                    Verify: <span id="selected-account" class="badge badge-primary"></span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -172,26 +173,21 @@
                         the dashboard and UptimeRobot link. Please ensure that the wallet from which the funds
                         come is from the verified wallets.
                     </p>
-                    <p>
-                        Please send the transfer to the following address:
-                        <strong>0x440a948af13fe3b4dd1b341e2aa834f81bf6ff51</strong>
-                    </p>
-                    <ul>
-                        <li>Step 1: Complete the transfer to the specified address.</li>
-                        <li>Step 2: After the transfer is done, enter the transaction hash in the field below.
-                        </li>
-                        <li>Step 3: Press the submit button to complete the process.</li>
-                    </ul>
+
+                    <div id="contribution-specs" class="mb-2"></div>
+
                 </div>
 
-
+                <h5>Contributions</h5>
+                <span>Submit a transaction hash:</span>
                 <div class="d-flex gap-1 mb-1">
-                    <input type="text" class="form-control" id="tx-hash-input" placeholder="Transaction Hash" />
-                    <button class="btn btn-outline-primary" id="btn-submit-tx">
+                    <input type="text" class="form-control disable-on-action" id="tx-hash-input" placeholder="Transaction Hash" />
+                    <button class="btn btn-outline-primary disable-on-action" id="btn-submit-tx">
                         Submit
                     </button>
                 </div>
                 <div class="table-responsive">
+                    
                     <table class="table table-bordered">
                         <thead class="table-dark">
                             <tr>
@@ -286,8 +282,6 @@
         </template>
     </div>
 
-
-
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
         <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="toast-header">
@@ -299,6 +293,19 @@
             </div>
         </div>
     </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="error-toast" class="toast bg-danger text-white" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-danger text-white">
+                <strong class="me-auto">Error</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                <!-- This message will be dynamically updated -->
+            </div>
+        </div>
+    </div>
+    
 
 
     <!--
@@ -312,8 +319,8 @@
 
     -->
 
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.1/dist/umd/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.0/dist/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@4.12.1/dist/web3.min.js"></script>
     <script type="text/javascript" src="https://unpkg.com/web3modal@1.9.12/dist/index.js"></script>
     <!-- <script type="text/javascript" src="https://unpkg.com/evm-chains@0.2.0/dist/umd/index.min.js"></script> -->
     <!-- <script type="text/javascript" src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script> -->

@@ -1,5 +1,4 @@
 require("dotenv").config();
-const axios = require('axios');
 const fs = require('node:fs');
 const path = require('node:path');
 

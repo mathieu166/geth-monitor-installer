@@ -168,6 +168,6 @@ async function calculateAccessExpiry(client, discord_username, amount) {
 (async function main() {
     while (true) {
         await checkPendingTransactions();
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, 10000));
     }
 })();
