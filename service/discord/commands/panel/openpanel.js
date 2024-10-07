@@ -40,6 +40,7 @@ module.exports = {
 		try {
             // Get the discord username
             const discordUsername = interaction.user.username;
+            const discordUserId = interaction.user.id;
       
             // Step 1: Create or get a session key from master /create_session using axios
             const sessionResponse = await axios.post(`${MASTER_BASE_URL}/panel/create_session`, {
@@ -54,7 +55,7 @@ module.exports = {
             const sessionKey = encryptText(sessionResponse.data.session_key);
       
             // Step 2: Build the panel URL with session_key and discord_username
-            const panelUrl = `${PANEL_URL}?key=${sessionKey}&discorduser=${discordUsername}&timestamp=${new Date().getTime()}`;
+            const panelUrl = `${PANEL_URL}?key=${sessionKey}&discorduser=${discordUsername}&discordUserId=${discordUserId}&timestamp=${new Date().getTime()}`;
       
             // Step 3: Create the button with the panel URL
             const button = new ButtonBuilder()

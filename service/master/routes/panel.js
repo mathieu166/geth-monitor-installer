@@ -111,6 +111,7 @@ module.exports = (pool) => {
       message,
       sessionKey: k,
       discordUsername,
+      discordUserId,
       address,
     } = req.body;
 
@@ -165,8 +166,8 @@ module.exports = (pool) => {
       if (parseInt(addressExists.rows[0].count) > 0) {
         // Update discord_username in the validator table
         await client.query(
-          "UPDATE validator SET discord_username = $1 WHERE address = $2",
-          [discordUsername, address.toLowerCase()]
+          "UPDATE validator SET discord_username = $1, discord_userid = $2 WHERE address = $3",
+          [discordUsername, discordUserId, address.toLowerCase()]
         );
       } else {
         // Step 5: Address not found in validator table, check in validator_verified_wallet

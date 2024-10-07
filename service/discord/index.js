@@ -2,9 +2,6 @@ require("dotenv").config();
 const fs = require('node:fs');
 const path = require('node:path');
 
-const MASTER_BASE_URL = process.env.MASTER_BASE_URL;
-const PANEL_URL = process.env.PANEL_URL;
-
 const {
   Client,
   Events,

@@ -1,42 +1,25 @@
-const { ethers } = require("ethers");
+require("dotenv").config();
+const { Client, GatewayIntentBits } = require('discord.js');
 
-// Set up a provider connected to the Binance Smart Chain
-const provider = new ethers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+// Create a new client instance
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-// Function to extract the amount of USDC transferred from a transaction hash
-async function extractUsdcAmount(txHash) {
-    try {
-        // Fetch the transaction details
-        const tx = await provider.getTransaction(txHash);
+// Replace with your bot token
+const BOT_TOKEN = process.env.DISCORD_TOKEN;
 
-        if (!tx) {
-            console.log("Transaction not found. Please check the transaction hash.");
-            return;
-        }
+// Replace with your Discord User ID
+const USER_ID = '';
 
-        console.log("Transaction details:", tx); // Log transaction details for debugging
+client.once('ready', () => {
+    console.log(`Logged in as ${client.user.tag}!`);
 
-        // Check if the transaction input is for a USDC transfer (ERC20 transfer function)
-        const amountHex = tx.data.slice(-64); // Extract last 64 characters (32 bytes)
+    // Fetch the user by ID and send a message
+    client.users.fetch(USER_ID).then(user => {
+        user.send('Hello! This is a test message from your bot.')
+            .then(() => console.log('Message sent successfully!'))
+            .catch(console.error);
+    }).catch(console.error);
+});
 
-        // Ensure amountHex is valid and has no leading zeros
-        const trimmedHex = '0x' + amountHex; // Trim leading zeros
-        const amountWei = BigInt(trimmedHex); // Convert hex to BigNumber
-
-        // USDC has 6 decimals
-        const decimals = 18;
-
-        // Convert to a string representing the amount in USDC
-        const amountUsdc = ethers.formatUnits(amountWei, decimals); 
-
-        console.log(`Amount transferred: ${amountUsdc} USDC`);
-    } catch (error) {
-        console.error("Error fetching transaction:", error);
-    }
-}
-
-// Given transaction hash
-const txHash = "0x508be8a176c85ec5387d396b41297434de032c5feb6d8e6b265818884b68eec8";
-
-// Execute the function
-extractUsdcAmount(txHash);
+// Log in to Discord with your bot's token
+client.login(BOT_TOKEN);

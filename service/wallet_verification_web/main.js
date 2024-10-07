@@ -19,6 +19,7 @@ let selectedAccount;
 
 let sessionKey;
 let discordUsername;
+let discordUserId;
 
 function validate_txhash(txhash) {
   return /^0x([A-Fa-f0-9]{64})$/.test(txhash);
@@ -44,9 +45,14 @@ async function init() {
   const urlParams = new URLSearchParams(window.location.search);
   const key = urlParams.get("key");
   const discordUser = urlParams.get("discorduser");
+  const dUserid = urlParams.get("discordUserId");
 
   if (key) {
     sessionKey = key;
+  }
+
+  if(dUserid){
+    discordUserId = dUserid;
   }
 
   if (discordUser) {
@@ -100,6 +106,7 @@ const configureVerifyButton = () => {
         message: message,
         sessionKey: sessionKey,
         discordUsername: discordUsername,
+        discordUserId: discordUserId,
         address: selectedAccount,
       }),
     });
