@@ -348,7 +348,7 @@ module.exports = (pool) => {
         `SELECT txdate, address, "chain", txhash, amount, additional_days, access_expiry
         FROM validator_contribution
         WHERE discord_username= $1
-        ORDER BY txdate DESC`,
+        ORDER BY access_expiry DESC`,
         [discord_username]
       )
 
