@@ -29,15 +29,18 @@ app.get('/', async (req, res) => {
   const currentTime = Math.floor(Date.now() / 1000);
   try {
     // Check if the signer is active in the validator table
-    const validatorResult = await client.query(
-      'SELECT is_uptimerobot_active FROM validator WHERE address = $1',
+    const checkAccess = await client.query(
+      `SELECT COALESCE(MAX(vc.access_expiry), 1730419200) > EXTRACT (EPOCH FROM CURRENT_TIMESTAMP) access_granted
+      FROM validator_contribution vc
+      JOIN validator v ON vc.discord_username = v.discord_username
+      WHERE v.address = $1`,
       [address]
     );
 
-    if (validatorResult.rows.length === 0 || !validatorResult.rows[0].is_uptimerobot_active) {
+    if (!checkAccess.rows[0].access_granted) {
       return res.status(403).json({
         status: 'error',
-        message: 'Access denied: Signer is not active or not found in the validator table'
+        message: 'Access denied: Contribution Required. Request Access from matroxdev on Discord'
       });
     }
 
@@ -53,14 +56,14 @@ app.get('/', async (req, res) => {
       if (currentTime - lastTimestamp > threshold) {
         return res.status(400).json({
           status: 'error',
-          message: `Signer did not validate a block in the last ${threshold / 60} minutes`
+          message: `Validator did not validate a block in the last ${threshold / 60} minutes`
         });
       }
       return res.status(200).json({ status: 'ok', last_validated_timestamp: lastTimestamp });
     } else {
       return res.status(404).json({
         status: 'error',
-        message: 'Signer address not found in the block table'
+        message: 'Validator address not found in the block table'
       });
     }
   } catch (err) {
