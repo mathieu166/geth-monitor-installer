@@ -60,7 +60,15 @@ async function init() {
     document.querySelector("#url-discord-user").textContent = discordUser;
   } else {
     document.querySelector("#url-discord-user").textContent = "Not provided";
+
+    // hide all-content
+    const allContent = document.getElementById("all-content");
+    allContent.style.display = "none"; // Unhide the message
+
+    return;
   }
+
+  
 
   if (key && discordUser) {
     refreshVerifiedWallets();
