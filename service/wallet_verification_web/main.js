@@ -26,7 +26,7 @@ function validate_txhash(txhash) {
 }
 
 function storeReturningUserFlag() {
-  localStorage.setItem('hasConnectedBefore', 'true');
+  localStorage.setItem("hasConnectedBefore", "true");
 }
 
 async function init() {
@@ -51,7 +51,7 @@ async function init() {
     sessionKey = key;
   }
 
-  if(dUserid){
+  if (dUserid) {
     discordUserId = dUserid;
   }
 
@@ -68,8 +68,6 @@ async function init() {
     return;
   }
 
-  
-
   if (key && discordUser) {
     refreshVerifiedWallets();
     refreshContributions();
@@ -78,7 +76,7 @@ async function init() {
 
   configureVerifyButton();
 
-  const hasConnectedBefore = localStorage.getItem('hasConnectedBefore');
+  const hasConnectedBefore = localStorage.getItem("hasConnectedBefore");
 
   // Check if a cached provider exists
   const cachedProvider = web3Modal.cachedProvider;
@@ -317,22 +315,21 @@ function showSuccessToast(message) {
 }
 
 function showErrorToast(errorMessage) {
-  const toastElement = document.getElementById('error-toast');
+  const toastElement = document.getElementById("error-toast");
 
   // Set the message inside the toast body
-  const toastBody = toastElement.querySelector('.toast-body');
+  const toastBody = toastElement.querySelector(".toast-body");
   if (toastBody) {
     toastBody.textContent = errorMessage;
   }
 
   // Create a new Bootstrap toast instance and show it with a longer delay (e.g., 10 seconds)
   const toast = new bootstrap.Toast(toastElement, {
-    delay: 15000 // Display for 10 seconds (10000ms)
+    delay: 15000, // Display for 10 seconds (10000ms)
   });
-  
+
   toast.show();
 }
-
 
 async function refreshContributions() {
   const response = await fetch(
@@ -357,7 +354,17 @@ async function refreshContributions() {
       if (data.contributions.length === 0) {
         contributionsContainer.innerHTML =
           '<tr><td colspan="7" style="text-align: center">No contributions found.</td></tr>';
+
+        const accessGranted = document.querySelector("#access-granted");
+        accessGranted.textContent = new Date(
+          1730419200 * 1000
+        ).toLocaleString();
       } else {
+        const accessGranted = document.querySelector("#access-granted");
+        accessGranted.textContent = new Date(
+          data.contributions[0].access_expiry * 1000
+        ).toLocaleString();
+
         data.contributions?.forEach((contribution) => {
           const clone = template.content.cloneNode(true);
 
@@ -498,12 +505,12 @@ async function refreshContributions() {
 
 function setContributionValue(value) {
   // Save the user's chosen contribution value to localStorage
-  localStorage.setItem('contributionValue', value);
+  localStorage.setItem("contributionValue", value);
 }
 
 function getContributionValue() {
   // Retrieve the stored contribution value from localStorage, or return the default value of 15
-  const storedValue = localStorage.getItem('contributionValue');
+  const storedValue = localStorage.getItem("contributionValue");
   return storedValue ? parseInt(storedValue, 10) : 15;
 }
 
@@ -519,71 +526,81 @@ async function refreshContributionSpecs() {
   );
 
   if (response.ok) {
-
     const web3 = new Web3(provider);
     const currentChainId = await web3.eth.getChainId();
-    
+
     const data = await response.json();
-    
+
     if (data) {
       const { chains, recipients } = data;
-      const selectedChain = chains.find(chain => chain.chainId == currentChainId);
+      const selectedChain = chains.find(
+        (chain) => chain.chainId == currentChainId
+      );
       const recipient = recipients[0]; // Use the first recipient address
 
       // Get the container where the content will be added
-      const contributionSpecsDiv = document.getElementById('contribution-specs');
-      contributionSpecsDiv.innerHTML = ''; // Clear previous content
+      const contributionSpecsDiv =
+        document.getElementById("contribution-specs");
+      contributionSpecsDiv.innerHTML = ""; // Clear previous content
 
       // Add wallet address (moved above the cards)
-      const recipientAddressDiv = document.createElement('div');
+      const recipientAddressDiv = document.createElement("div");
       recipientAddressDiv.innerHTML = `<h6>Send funds to: <span class="text-primary">${recipient}</span></h6>`;
-      contributionSpecsDiv.appendChild(recipientAddressDiv);  // Append to main container
+      contributionSpecsDiv.appendChild(recipientAddressDiv); // Append to main container
 
       // Create a Bootstrap row to hold two sections
-      const rowDiv = document.createElement('div');
-      rowDiv.classList.add('row', 'mt-4');
+      const rowDiv = document.createElement("div");
+      rowDiv.classList.add("row", "mt-4");
 
       // === Left Section: Automated Contribution ===
-      const leftColDiv = document.createElement('div');
-      leftColDiv.classList.add('col-md-6', 'd-flex', 'align-items-stretch'); // Ensure the column stretches
+      const leftColDiv = document.createElement("div");
+      leftColDiv.classList.add("col-md-6", "d-flex", "align-items-stretch"); // Ensure the column stretches
 
-      const automatedCard = document.createElement('div');
-      automatedCard.classList.add('card', 'p-2', 'shadow-sm', 'mb-3', 'h-100', 'hover-lift', 'w-100'); // Card with h-100 to stretch
+      const automatedCard = document.createElement("div");
+      automatedCard.classList.add(
+        "card",
+        "p-2",
+        "shadow-sm",
+        "mb-3",
+        "h-100",
+        "hover-lift",
+        "w-100"
+      ); // Card with h-100 to stretch
 
-      const automatedTitle = document.createElement('h5');
-      automatedTitle.classList.add('card-title');
-      automatedTitle.textContent = 'Automated Contribution';
+      const automatedTitle = document.createElement("h5");
+      automatedTitle.classList.add("card-title");
+      automatedTitle.textContent = "Automated Contribution";
       automatedCard.appendChild(automatedTitle);
 
       // Create USDC balance element
-      const balanceElement = document.createElement('p');
-      balanceElement.id = 'usdc-balance';
-      balanceElement.textContent = 'Balance: --'
+      const balanceElement = document.createElement("p");
+      balanceElement.id = "usdc-balance";
+      balanceElement.textContent = "Balance: --";
       automatedCard.appendChild(balanceElement);
 
       // Create input field for contribution value
-      const inputContainer = document.createElement('div');
-      inputContainer.classList.add('form-group', 'mt-3', 'mb-3');
-      
-      const inputLabel = document.createElement('label');
-      inputLabel.setAttribute('for', 'contributionValue');
-      inputLabel.classList.add('form-label');
-      inputLabel.textContent = 'Contribution Value ($):';
-      
-      const inputField = document.createElement('input');
-      inputField.type = 'number';
-      inputField.classList.add('form-control', 'w-100');
-      inputField.value = getContributionValue();  // Use stored value or default value
-      inputField.id = 'contributionValue';
+      const inputContainer = document.createElement("div");
+      inputContainer.classList.add("form-group", "mt-3", "mb-3");
 
-       // Listen for changes and save the new value to localStorage
-      inputField.addEventListener('input', (event) => {
+      const inputLabel = document.createElement("label");
+      inputLabel.setAttribute("for", "contributionValue");
+      inputLabel.classList.add("form-label");
+      inputLabel.textContent = "Contribution Value ($):";
+
+      const inputField = document.createElement("input");
+      inputField.type = "number";
+      inputField.classList.add("form-control", "w-100");
+      inputField.value = getContributionValue(); // Use stored value or default value
+      inputField.id = "contributionValue";
+
+      // Listen for changes and save the new value to localStorage
+      inputField.addEventListener("input", (event) => {
         setContributionValue(event.target.value);
       });
 
-      const txhashSpan = document.createElement('span')
-      txhashSpan.id = 'txhashResult'
-      txhashSpan.classList.add('fs-6')
+      const txhashSpan = document.createElement("span");
+      txhashSpan.id = "txhashResult";
+      txhashSpan.classList.add("fs-6");
 
       inputContainer.appendChild(inputLabel);
       inputContainer.appendChild(inputField);
@@ -591,29 +608,34 @@ async function refreshContributionSpecs() {
       automatedCard.appendChild(inputContainer);
 
       if (!selectedAccount) {
-        const connectButton = document.createElement('button');
-        connectButton.classList.add('btn', 'btn-primary');
-        connectButton.textContent = 'Connect Wallet';
-        connectButton.addEventListener('click', async () => {
+        const connectButton = document.createElement("button");
+        connectButton.classList.add("btn", "btn-primary");
+        connectButton.textContent = "Connect Wallet";
+        connectButton.addEventListener("click", async () => {
           await onConnect(); // Connect wallet on button click
           refreshContributionSpecs(); // Re-render the contribution buttons after wallet is connected
         });
         automatedCard.appendChild(connectButton);
       } else {
         // Create buttons for each chain and add event listeners if the wallet is connected
-        const buttonContainer = document.createElement('div');
-        buttonContainer.classList.add('d-flex', 'flex-wrap', 'gap-2', 'mt-3', 'justify-content-center', 'align-items-center');
-        
-
+        const buttonContainer = document.createElement("div");
+        buttonContainer.classList.add(
+          "d-flex",
+          "flex-wrap",
+          "gap-2",
+          "mt-3",
+          "justify-content-center",
+          "align-items-center"
+        );
 
         chains.forEach(async (chain) => {
-          const button = document.createElement('button');
-          button.classList.add('btn', 'disable-on-action'); // Add general button styles
+          const button = document.createElement("button");
+          button.classList.add("btn", "disable-on-action"); // Add general button styles
 
-          if(selectedChain?.name === chain.name){
-            button.classList.add('btn-success');
-          }else{
-            button.classList.add('btn-secondary');
+          if (selectedChain?.name === chain.name) {
+            button.classList.add("btn-success");
+          } else {
+            button.classList.add("btn-secondary");
           }
 
           // Add custom styling based on the chain name
@@ -630,22 +652,22 @@ async function refreshContributionSpecs() {
           // }
 
           button.textContent = `Send on ${chain.name}`;
-          button.addEventListener('click', async () => {
+          button.addEventListener("click", async () => {
             // Select all elements with the class 'disable-on-action'
-            const elements = document.querySelectorAll('.disable-on-action');
+            const elements = document.querySelectorAll(".disable-on-action");
 
             // Iterate over each element and disable it
-            elements.forEach(element => {
+            elements.forEach((element) => {
               element.disabled = true;
             });
-            try{
+            try {
               await sendContribution(chain, recipient, inputField.value);
-            }finally{
-              elements.forEach(element => {
+            } finally {
+              elements.forEach((element) => {
                 element.disabled = false;
               });
             }
-            await updateUSDCBalance(chain);  // Refresh the balance after contribution
+            await updateUSDCBalance(chain); // Refresh the balance after contribution
           });
 
           // Ensure the button gets appended after the balance is fetched
@@ -658,19 +680,27 @@ async function refreshContributionSpecs() {
       leftColDiv.appendChild(automatedCard);
 
       // === Right Section: Manual Contribution ===
-      const rightColDiv = document.createElement('div');
-      rightColDiv.classList.add('col-md-6', 'd-flex', 'align-items-stretch'); // Ensure the column stretches
+      const rightColDiv = document.createElement("div");
+      rightColDiv.classList.add("col-md-6", "d-flex", "align-items-stretch"); // Ensure the column stretches
 
-      const manualCard = document.createElement('div');
-      manualCard.classList.add('card', 'p-2', 'shadow-sm', 'mb-3', 'h-100', 'hover-lift', 'w-100'); // Card with h-100 to stretch
+      const manualCard = document.createElement("div");
+      manualCard.classList.add(
+        "card",
+        "p-2",
+        "shadow-sm",
+        "mb-3",
+        "h-100",
+        "hover-lift",
+        "w-100"
+      ); // Card with h-100 to stretch
 
-      const manualTitle = document.createElement('h5');
-      manualTitle.classList.add('card-title');
-      manualTitle.textContent = 'Manual Contribution';
+      const manualTitle = document.createElement("h5");
+      manualTitle.classList.add("card-title");
+      manualTitle.textContent = "Manual Contribution";
       manualCard.appendChild(manualTitle);
 
       // Add manual steps
-      const stepsList = document.createElement('ul');
+      const stepsList = document.createElement("ul");
       stepsList.innerHTML = `
         <li>Step 1: Complete the transfer to the specified address.</li>
         <li>Step 2: After the transfer is done, enter the transaction hash in the field below.</li>
@@ -679,12 +709,14 @@ async function refreshContributionSpecs() {
       manualCard.appendChild(stepsList);
 
       // Add USDC addresses for each chain (small text)
-      const usdcAddressDiv = document.createElement('ul');
+      const usdcAddressDiv = document.createElement("ul");
       usdcAddressDiv.innerHTML = `<h6>USDC Addresses for Manual Transfer:</h6>`;
-      chains.forEach(chain => {
-        const addressInfo = document.createElement('li');
-        addressInfo.innerHTML = `<strong>${chain.name.toUpperCase()}:</strong> ${chain.usdcAddress}`;
-        addressInfo.classList.add('text-muted', 'small'); // Make text smaller
+      chains.forEach((chain) => {
+        const addressInfo = document.createElement("li");
+        addressInfo.innerHTML = `<strong>${chain.name.toUpperCase()}:</strong> ${
+          chain.usdcAddress
+        }`;
+        addressInfo.classList.add("text-muted", "small"); // Make text smaller
         usdcAddressDiv.appendChild(addressInfo);
       });
 
@@ -701,7 +733,7 @@ async function refreshContributionSpecs() {
       // const web3 = new Web3(provider); // Use the provider from Web3Modal
       // const currentChainId = await web3.eth.getChainId();
       // const chain = chains.find(chain => chain.chainId == currentChainId);
-      await updateUSDCBalance(selectedChain); 
+      await updateUSDCBalance(selectedChain);
     }
   }
 }
@@ -713,47 +745,55 @@ async function updateUSDCBalance(chain) {
   }
 
   if (!chain) {
-    document.getElementById('usdc-balance').textContent = 'USDC not supported on this network.';
+    document.getElementById("usdc-balance").textContent =
+      "USDC not supported on this network.";
     return;
   }
-  
+
   try {
     const web3 = new Web3(provider); // Use the provider from Web3Modal
 
     // Instantiate the USDC contract using the ABI provided
     const usdcContract = new web3.eth.Contract(
-      [{
-        constant: true,
-        inputs: [{ name: '_owner', type: 'address' }],
-        name: 'balanceOf',
-        outputs: [{ name: '', type: 'uint256' }],
-        payable: false,
-        stateMutability: 'view',
-        type: 'function',
-      }],
+      [
+        {
+          constant: true,
+          inputs: [{ name: "_owner", type: "address" }],
+          name: "balanceOf",
+          outputs: [{ name: "", type: "uint256" }],
+          payable: false,
+          stateMutability: "view",
+          type: "function",
+        },
+      ],
       chain.usdcAddress
     );
 
     // Fetch the USDC balance for the connected account
-    const tokenBalance = await usdcContract.methods.balanceOf(selectedAccount).call();
+    const tokenBalance = await usdcContract.methods
+      .balanceOf(selectedAccount)
+      .call();
 
     // Convert the balance to a human-readable format
-    const readableBalance = (parseFloat(tokenBalance) / Math.pow(10, chain.decimals)).toFixed(2);
+    const readableBalance = (
+      parseFloat(tokenBalance) / Math.pow(10, chain.decimals)
+    ).toFixed(2);
 
     // Display the balance in the UI
-    document.getElementById('usdc-balance').textContent = `Balance: ${readableBalance} USDC on ${chain.name}`;
+    document.getElementById(
+      "usdc-balance"
+    ).textContent = `Balance: ${readableBalance} USDC on ${chain.name}`;
   } catch (error) {
     console.error(`Error fetching USDC balance:`, error);
-    document.getElementById('usdc-balance').textContent = 'Error fetching balance.';
+    document.getElementById("usdc-balance").textContent =
+      "Error fetching balance.";
   }
 }
 
-
-
 async function sendContribution(chain, recipient, contributionValue) {
-  const txHashInput = document.getElementById('tx-hash-input')
-  txHashInput.value = '';
-  
+  const txHashInput = document.getElementById("tx-hash-input");
+  txHashInput.value = "";
+
   // Ensure decimals is provided and valid
   const decimals = chain.decimals || 18; // Default to 18 if decimals is not provided
   if (isNaN(decimals) || !contributionValue) {
@@ -762,9 +802,13 @@ async function sendContribution(chain, recipient, contributionValue) {
   }
 
   // Convert the contribution value into the correct WEI format based on chain decimals
-  const valueInWei = Web3.utils.toWei(contributionValue.toString(), 'ether') / Math.pow(10, (18 - decimals));
+  const valueInWei =
+    Web3.utils.toWei(contributionValue.toString(), "ether") /
+    Math.pow(10, 18 - decimals);
 
-  console.log(`Sending ${valueInWei} to ${recipient} on ${chain.name} via ${chain.usdcAddress}`);
+  console.log(
+    `Sending ${valueInWei} to ${recipient} on ${chain.name} via ${chain.usdcAddress}`
+  );
 
   try {
     const web3 = new Web3(provider); // Use the provider from Web3Modal
@@ -787,21 +831,25 @@ async function sendContribution(chain, recipient, contributionValue) {
           try {
             await provider.request({
               method: "wallet_addEthereumChain",
-              params: [{
-                chainId: Web3.utils.toHex(desiredChainId),
-                chainName: chain.name,
-                rpcUrls: [chain.rpcUrl],
-                nativeCurrency: {
-                  name: chain.nativeCurrency.name,
-                  symbol: chain.nativeCurrency.symbol,
-                  decimals: chain.nativeCurrency.decimals,
+              params: [
+                {
+                  chainId: Web3.utils.toHex(desiredChainId),
+                  chainName: chain.name,
+                  rpcUrls: [chain.rpcUrl],
+                  nativeCurrency: {
+                    name: chain.nativeCurrency.name,
+                    symbol: chain.nativeCurrency.symbol,
+                    decimals: chain.nativeCurrency.decimals,
+                  },
+                  blockExplorerUrls: [chain.blockExplorerUrl],
                 },
-                blockExplorerUrls: [chain.blockExplorerUrl],
-              }],
+              ],
             });
           } catch (addError) {
             console.error(`Failed to add ${chain.name} chain`, addError);
-            showErrorToast(`Failed to add ${chain.name} chain: ${addError.message}`);
+            showErrorToast(
+              `Failed to add ${chain.name} chain: ${addError.message}`
+            );
             return;
           }
         } else {
@@ -813,37 +861,53 @@ async function sendContribution(chain, recipient, contributionValue) {
     }
 
     // Check account's token balance
-    const tokenContract = new web3.eth.Contract([{
-      constant: true,
-      inputs: [{ name: '_owner', type: 'address' }],
-      name: 'balanceOf',
-      outputs: [{ name: 'balance', type: 'uint256' }],
-      type: 'function'
-    }], chain.usdcAddress);
+    const tokenContract = new web3.eth.Contract(
+      [
+        {
+          constant: true,
+          inputs: [{ name: "_owner", type: "address" }],
+          name: "balanceOf",
+          outputs: [{ name: "balance", type: "uint256" }],
+          type: "function",
+        },
+      ],
+      chain.usdcAddress
+    );
 
-    const tokenBalance = await tokenContract.methods.balanceOf(fromAccount).call();
+    const tokenBalance = await tokenContract.methods
+      .balanceOf(fromAccount)
+      .call();
 
     // Convert token balance (BigInt) to human-readable format by dividing by 10^decimals
-    const readableBalance = BigInt(tokenBalance) / BigInt(Math.pow(10, decimals));
+    const readableBalance =
+      BigInt(tokenBalance) / BigInt(Math.pow(10, decimals));
 
     // Check if the account has enough balance
     if (BigInt(tokenBalance) < BigInt(valueInWei)) {
-      showErrorToast(`Insufficient balance! You only have ${readableBalance} USDC`);
+      showErrorToast(
+        `Insufficient balance! You only have ${readableBalance} USDC`
+      );
       return;
     }
 
     // Create the transaction data using the ERC-20 transfer function
-    const txData = web3.eth.abi.encodeFunctionCall({
-      name: 'transfer',
-      type: 'function',
-      inputs: [{
-        type: 'address',
-        name: '_to',
-      }, {
-        type: 'uint256',
-        name: '_value',
-      }]
-    }, [recipient, valueInWei.toString()]); // Arguments: recipient address and value in WEI
+    const txData = web3.eth.abi.encodeFunctionCall(
+      {
+        name: "transfer",
+        type: "function",
+        inputs: [
+          {
+            type: "address",
+            name: "_to",
+          },
+          {
+            type: "uint256",
+            name: "_value",
+          },
+        ],
+      },
+      [recipient, valueInWei.toString()]
+    ); // Arguments: recipient address and value in WEI
 
     // Prepare the transaction object
     const tx = {
@@ -851,36 +915,37 @@ async function sendContribution(chain, recipient, contributionValue) {
       to: chain.usdcAddress, // USDC contract address on the current chain
       data: txData, // Encoded transfer data
       gas: await estimateGas(fromAccount, chain.usdcAddress, txData), // Gas estimate
-      gasPrice: web3.utils.toWei('5', 'gwei'), // Gas price in Gwei
+      gasPrice: web3.utils.toWei("5", "gwei"), // Gas price in Gwei
       chainId: desiredChainId, // Desired chain ID
     };
 
     // Send the transaction
 
-    web3.eth.sendTransaction(tx)
-      .on('transactionHash', function(hash){
+    web3.eth
+      .sendTransaction(tx)
+      .on("transactionHash", function (hash) {
         txHashInput.value = hash;
       })
-      .on('receipt', function(receipt){
-          console.log('receipt', receipt)
+      .on("receipt", function (receipt) {
+        console.log("receipt", receipt);
       })
-      .on('confirmation', function(confirmationNumber, receipt){ 
-          console.log('confirmation', confirmationNumber, receipt)
-       })
-      .on('error', function(error){
-        if (error && !error.message?.includes('transaction indexing is in progress')) {
+      .on("confirmation", function (confirmationNumber, receipt) {
+        console.log("confirmation", confirmationNumber, receipt);
+      })
+      .on("error", function (error) {
+        if (
+          error &&
+          !error.message?.includes("transaction indexing is in progress")
+        ) {
           console.error(`Error sending transaction on ${chain.name}:`, error);
           showErrorToast(`Error: ${error.message}`);
-        }        
-      }); 
-
-
+        }
+      });
   } catch (error) {
     console.error(`Error sending transaction on ${chain.name}:`, error);
     showErrorToast(`Error: ${error.message}`);
   }
 }
-
 
 // Helper function to estimate gas for the transaction
 async function estimateGas(from, to, data) {
@@ -894,15 +959,14 @@ async function estimateGas(from, to, data) {
 
     return gas;
   } catch (error) {
-    console.error('Gas estimation failed:', error);
-    return 23000; 
+    console.error("Gas estimation failed:", error);
+    return 23000;
   }
 }
 
-
 function setupProviderListeners() {
   if (provider) {
-    provider.on("accountsChanged",async () => {
+    provider.on("accountsChanged", async () => {
       await refreshAccountData();
       await refreshContributionSpecs();
     });
@@ -990,9 +1054,7 @@ async function onSubmitTransaction() {
       await refreshContributions();
     } else {
       const errorResult = await response.json();
-      showErrorToast(
-        `${errorResult.error || "Failed to submit transaction"}`
-      );
+      showErrorToast(`${errorResult.error || "Failed to submit transaction"}`);
     }
   } catch (e) {
     console.error("Error while submitting transaction", e);
@@ -1014,8 +1076,8 @@ window.addEventListener("load", () => {
     // await web3Modal?.clearCachedProvider();
     await init();
   }, 1000);
-  document.querySelector("#btn-connect").addEventListener("click", async ()=>{
-    await onConnect()
+  document.querySelector("#btn-connect").addEventListener("click", async () => {
+    await onConnect();
     await refreshContributionSpecs();
   });
   document
