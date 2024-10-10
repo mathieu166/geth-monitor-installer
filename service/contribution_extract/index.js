@@ -42,7 +42,7 @@ async function checkPendingTransactions() {
                     // Step 3: Check if the "to" address is the USDC address for the chain
                     if (to.toLowerCase() === chain.usdcAddress.toLowerCase() && ALLOWED_RECIPIENTS.includes(recipient.toLowerCase())) {
                         // Extract the amount of USDC from the transaction input
-                        const amount = extractUsdcAmount(data, chain.decimal);
+                        const amount = extractUsdcAmount(data, chain.decimals);
 
                         // Step 4: Check if the "from" address is in the verified wallets
                         const verifiedRes = await client.query(

@@ -37,7 +37,7 @@ module.exports = {
         symbol: "VTRU",
         decimals: 18,
       },
-      decimals: 18,
+      decimals: 6,
     },
   ],
   recipients: ["0x440a948af13fe3b4dd1b341e2aa834f81bf6ff51"],
