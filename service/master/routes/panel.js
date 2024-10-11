@@ -309,6 +309,84 @@ module.exports = (pool) => {
     }
   });
 
+  router.post("/updateDiscordAlerts", async (req, res) => {
+    const { session_key: k, discord_username, wallet_address, alert_type, alert_value } = req.body;
+  
+    // Step 1: Validate input
+    if (!k || !discord_username || !wallet_address || !alert_type || typeof alert_value === "undefined") {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+  
+    const client = await pool.connect(); // Get a client from the pool
+  
+    try {
+      // Start a transaction
+      await client.query("BEGIN");
+  
+      const session_key = decryptText(k);
+  
+      // Step 2: Validate session
+      const sessionResult = await client.query(
+        `SELECT session_key 
+         FROM validator_panel_session 
+         WHERE discord_username = $1 
+         AND session_key = $2 
+         AND session_timeout > EXTRACT(EPOCH FROM NOW())`,
+        [discord_username, session_key]
+      );
+  
+      if (sessionResult.rows.length === 0) {
+        await client.query("ROLLBACK"); // Rollback the transaction on error
+        return res.status(403).json({ error: "Invalid or expired session" });
+      }
+  
+      // Refresh session timeout
+      await refreshSessionTimeout(client, discord_username, session_key);
+  
+      // Step 3: Check if the wallet address exists in the validator table
+      const walletResult = await client.query(
+        `SELECT address 
+         FROM validator 
+         WHERE address = $1
+         FOR UPDATE`,
+        [wallet_address]
+      );
+  
+      if (walletResult.rows.length === 0) {
+        // If the wallet address doesn't exist, rollback and return an error
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Wallet address not found" });
+      }
+  
+      // Step 4: Update the appropriate alert column based on the alert type
+      if (alert_type === "non-validating") {
+        await client.query(
+          `UPDATE validator 
+           SET is_discord_non_validation_alert = $1
+           WHERE address = $2`,
+          [alert_value, wallet_address]
+        );
+      } else {
+        // Rollback the transaction if the alert type is invalid
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "Invalid alert type" });
+      }
+  
+      // Step 5: Commit the transaction
+      await client.query("COMMIT");
+  
+      // Step 6: Return success response
+      res.status(200).json({ message: "Alert setting updated successfully" });
+    } catch (err) {
+      // Rollback the transaction on error
+      await client.query("ROLLBACK");
+      console.error("Error updating discord alerts:", err);
+      res.status(500).json({ error: "Internal server error", details: err.message });
+    } finally {
+      client.release(); // Release the client back to the pool
+    }
+  });
+
   router.get("/getContributions", async (req, res) => {
     const { discord_username, session_key: k } = req.query;
 
@@ -451,7 +529,7 @@ module.exports = (pool) => {
 
       // Step 2: Fetch addresses and encrypted passwords tied to the discord_username from the validator table
       const addressResult = await client.query(
-        `SELECT address, encrypted_password 
+        `SELECT address, encrypted_password, is_discord_non_validation_alert
          FROM validator 
          WHERE discord_username = $1`,
         [discord_username]
@@ -469,6 +547,7 @@ module.exports = (pool) => {
       const validators = addressResult.rows.map((row) => ({
         address: row.address,
         password: decryptText(row.encrypted_password),
+        isDiscordNonValidationAlert: row.is_discord_non_validation_alert,
       }));
 
       // Step 5: Map verified wallets

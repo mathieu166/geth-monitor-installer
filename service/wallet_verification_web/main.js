@@ -157,7 +157,7 @@ const refreshVerifiedWallets = async (retries = 3, delay = 500) => {
       const allContent = document.getElementById("all-content");
       allContent.style.display = "none"; // Unhide the message
 
-      return; // Exit the function
+      return;
     }
 
     // Check if the response is successful
@@ -171,6 +171,11 @@ const refreshVerifiedWallets = async (retries = 3, delay = 500) => {
     // Select the template and the container for the verified wallets
     const template = document.querySelector("#template-verified-wallet");
     const walletsContainer = document.querySelector("#wallets");
+
+    const templateDiscordAlerts = document.querySelector(
+      "#template-discord-alerts"
+    );
+    const discordAlertsContainer = document.querySelector("#discord-alerts");
 
     // Clear any previously loaded wallets
     walletsContainer.innerHTML = "";
@@ -187,49 +192,100 @@ const refreshVerifiedWallets = async (retries = 3, delay = 500) => {
 
     // Iterate over the wallets and append them to the table
     data.validators?.forEach((wallet) => {
-      const clone = template.content.cloneNode(true);
+      //
+      {
+        const clone = templateDiscordAlerts.content.cloneNode(true);
 
-      // Populate the template with wallet data (address and password)
-      const addressElement = clone.querySelector(".address");
-      const passwordElement = clone.querySelector(".password");
+        const addressShort = `${wallet.address.slice(
+          0,
+          6
+        )}...${wallet.address.slice(-10)}`;
 
-      // Set the text content
-      addressElement.textContent = wallet.address + "  ";
+        const input = clone.querySelector(".form-check-input");
+        input.checked = wallet.isDiscordNonValidationAlert;
 
-      // Set the password content and append the clipboard icon
-      const passwordContainer = document.createElement("span");
-      passwordContainer.textContent = wallet.password;
+        // Add event listener to the checkbox for change event
+        input.addEventListener("change", async () => {
+          try {
+            const response = await fetch(
+              `${BASE_API_URL}/updateDiscordAlerts`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  session_key: sessionKey, // use the global sessionKey
+                  discord_username: discordUsername, // use the global discordUsername
+                  wallet_address: wallet.address, // Pass the wallet address
+                  alert_type: "non-validating", // Specify the alert type
+                  alert_value: input.checked, // Pass the checkbox state (true/false)
+                }),
+              }
+            );
 
-      // Add copy icon to the password field
-      const copyIcon = document.createElement("i");
-      copyIcon.classList.add("bi", "bi-clipboard"); // Bootstrap clipboard icon
-      passwordContainer.appendChild(copyIcon);
+            if (!response.ok) {
+              throw new Error("Failed to update discord alerts");
+            }
 
-      passwordElement.appendChild(passwordContainer);
+            const data = await response.json();
+            showSuccessToast(data.message);
+          } catch (error) {
+            input.checked = !input.checked;
+            showErrorToast(error)
+          }
+        });
 
-      // Add click event to copy the full password to clipboard
-      passwordElement.addEventListener("click", () => {
-        navigator.clipboard
-          .writeText(wallet.password)
-          .then(() => {
-            // Use the reusable toast function to notify copy success
-            showSuccessToast("Password copied to clipboard!");
-          })
-          .catch((err) => {
-            console.error("Failed to copy the password: ", err);
-          });
-      });
+        const label = clone.querySelector(".form-check-label");
+        label.textContent = addressShort;
 
-      // Create a new span element for the badge
-      const badgeSpan = document.createElement("span");
-      badgeSpan.classList.add("badge", "text-bg-success", "ms-2"); // Add classes
-      badgeSpan.textContent = "Validator"; // Set the text content
+        discordAlertsContainer.appendChild(clone);
+      }
 
-      // Append the badge after the address text
-      addressElement.appendChild(badgeSpan);
+      {
+        const clone = template.content.cloneNode(true);
 
-      // Append the cloned row to the container
-      walletsContainer.appendChild(clone);
+        const addressElement = clone.querySelector(".address");
+        const passwordElement = clone.querySelector(".password");
+
+        // Set the text content
+        addressElement.textContent = wallet.address + "  ";
+
+        // Set the password content and append the clipboard icon
+        const passwordContainer = document.createElement("span");
+        passwordContainer.textContent = wallet.password;
+
+        // Add copy icon to the password field
+        const copyIcon = document.createElement("i");
+        copyIcon.classList.add("bi", "bi-clipboard"); // Bootstrap clipboard icon
+        passwordContainer.appendChild(copyIcon);
+
+        passwordElement.appendChild(passwordContainer);
+
+        // Add click event to copy the full password to clipboard
+        passwordElement.addEventListener("click", () => {
+          navigator.clipboard
+            .writeText(wallet.password)
+            .then(() => {
+              // Use the reusable toast function to notify copy success
+              showSuccessToast("Password copied to clipboard!");
+            })
+            .catch((err) => {
+              console.error("Failed to copy the password: ", err);
+            });
+        });
+
+        // Create a new span element for the badge
+        const badgeSpan = document.createElement("span");
+        badgeSpan.classList.add("badge", "text-bg-success", "ms-2"); // Add classes
+        badgeSpan.textContent = "Validator"; // Set the text content
+
+        // Append the badge after the address text
+        addressElement.appendChild(badgeSpan);
+
+        // Append the cloned row to the container
+        walletsContainer.appendChild(clone);
+      }
     });
 
     // Iterate over the wallets and append them to the table

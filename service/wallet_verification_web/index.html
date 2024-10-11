@@ -129,7 +129,7 @@
 
         <hr>
         <div id="all-content">
-            
+
             <div class="container mt-2 section-container">
                 <h3>Verified Wallets</h3>
                 <hr>
@@ -165,69 +165,96 @@
                 </div>
             </div>
 
-            <div class="container mt-2 section-container">
-                <h3>Your Contributions</h3>
-                <hr>
-                <div class="mb-3">
-                    <p>
-                        For every $5 worth of USDC on Polygon, BSC or Vitruveo, you will gain access to 28 days
-                        of
-                        the dashboard and UptimeRobot link. Please ensure that the wallet from which the funds
-                        come is from the verified wallets.
-                    </p>
+            <div class="container section-container">
+                <ul class="nav nav-tabs mb-3" id="tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="contributions-tab-btn" data-bs-toggle="tab" data-bs-target="#contributions-tab" type="button" role="tab" aria-controls="contributions-tab" aria-selected="true">Your Contributions</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="config-tab-btn" data-bs-toggle="tab" data-bs-target="#config-tab" type="button" role="tab" aria-controls="config-tab" aria-selected="false">Configurations</button>
+                    </li>
+                </ul>
 
-                    <div id="contribution-specs" class="mb-2"></div>
-
-                </div>
-
-                <h5>Contributions</h5>
-                <span>Submit a transaction hash:</span>
-                <div class="d-flex gap-1 mb-1">
-                    <input type="text" class="form-control disable-on-action" id="tx-hash-input" placeholder="Transaction Hash" />
-                    <button class="btn btn-outline-primary disable-on-action" id="btn-submit-tx">
-                        Submit
-                    </button>
-                </div>
-                <div class="table-responsive">
-                    
-                    <table class="table table-bordered">
-                        <thead class="table-dark">
-                            <tr>
-                                <th scope="col">Date</th>
-                                <th scope="col">Fund Source</th>
-                                <th scope="col">Chain</th>
-                                <th scope="col">TxHash</th>
-                                <th scope="col">USD Value</th>
-                                <th scope="col">Additional Days</th>
-                                <th scope="col">Access Expiry</th>
-                            </tr>
-                        </thead>
-                        <tbody id="contributions">
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="table-responsive">
-                    <h5>Pending and Failed Transactions</h5>
-
-                    <table class="table table-bordered">
-                        <thead class="table-dark">
-                            <tr>
-                                <th scope="col">Date</th>
-                                <th scope="col">TxHash</th>
-                                <th scope="col">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pendingContributions">
-                        </tbody>
-                    </table>
+                <div class="tab-content" id="myTabContent">
+                    <div class="tab-pane fade show active" id="contributions-tab" role="tabpanel" aria-labelledby="contributions-tab">
+                        <div >
+                            <div class="mb-3">
+                                <p>
+                                    For every $5 worth of USDC on Polygon, BSC or Vitruveo, you will gain access to 28 days
+                                    of
+                                    the dashboard and UptimeRobot link. Please ensure that the wallet from which the funds
+                                    come is from the verified wallets.
+                                </p>
+            
+                                <div id="contribution-specs" class="mb-2"></div>
+            
+                            </div>
+            
+                            <h5>Contributions</h5>
+                            <span>Submit a transaction hash:</span>
+                            <div class="d-flex gap-1 mb-1">
+                                <input type="text" class="form-control disable-on-action" id="tx-hash-input" placeholder="Transaction Hash" />
+                                <button class="btn btn-outline-primary disable-on-action" id="btn-submit-tx">
+                                    Submit
+                                </button>
+                            </div>
+                            <div class="table-responsive">
+                                
+                                <table class="table table-bordered">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th scope="col">Date</th>
+                                            <th scope="col">Fund Source</th>
+                                            <th scope="col">Chain</th>
+                                            <th scope="col">TxHash</th>
+                                            <th scope="col">USD Value</th>
+                                            <th scope="col">Additional Days</th>
+                                            <th scope="col">Access Expiry</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="contributions">
+                                    </tbody>
+                                </table>
+                            </div>
+            
+                            <div class="table-responsive">
+                                <h5>Pending and Failed Transactions</h5>
+            
+                                <table class="table table-bordered">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th scope="col">Date</th>
+                                            <th scope="col">TxHash</th>
+                                            <th scope="col">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pendingContributions">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="config-tab" role="tabpanel" aria-labelledby="config-tab">
+                        <div >
+                            <div class="mb-3">
+                                <div class="d-flex">
+                                    <div class="card" style="width: 18rem;">
+                                        <img src="discord-header.webp" class="card-img-top" alt="Discord">
+                                        <div class="card-header">
+                                            <h4>Discord Alerts</h4>
+                                        </div>
+                                        <div class="card-body">
+                                            <label class="mb-2">45-minute Non-validation Alerts:</label>
+                                            <div id="discord-alerts"/>
+                                        </div>
+                                      </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
-
-
-
 
         <div class="container mt-2 section-container">
             <h3>Important Links</h3>
@@ -280,7 +307,13 @@
                 <td class="contribution-txhash"></td>
                 <td class="contribution-status"></td>
             </tr>
+        </template>
 
+        <template id="template-discord-alerts">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox">
+                <label class="form-check-label"></label>
+              </div>
         </template>
     </div>
 
