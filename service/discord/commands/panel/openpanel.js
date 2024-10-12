@@ -73,7 +73,7 @@ module.exports = {
 				.addFields({ name: 'Discord Username', value: discordUsername, inline: true })
 				.addFields({ name: 'Discord User ID', value: discordUserId, inline: true })
 				.setTimestamp()
-				.setFooter({ text: 'Validator System', iconURL: 'https://example.com/icon.png' }); // Optional footer and icon
+				.setFooter({ text: 'Validator System', iconURL: `${PANEL_URL}/secure-icon.webp` });
       
 			// Reply with the embed and the button
 			await interaction.reply({
