@@ -628,6 +628,12 @@ async function refreshContributionSpecs() {
       automatedTitle.textContent = "Automated Contribution";
       automatedCard.appendChild(automatedTitle);
 
+      
+      const additionalInfo = document.createElement("p");
+      additionalInfo.id = "additionalInfo";
+      additionalInfo.textContent = "After the transaction completes, the transaction hash will be copied bellow for you to Submit";
+      automatedCard.appendChild(additionalInfo);
+
       // Create USDC balance element
       const balanceElement = document.createElement("p");
       balanceElement.id = "usdc-balance";
