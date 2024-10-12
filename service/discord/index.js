@@ -52,11 +52,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 client.once(Events.ClientReady, (c) => {
-  client.user.setPresence({
-    activities: [{ name: "/help for commands", type: "LISTENING" }],
-    status: "online",
-  });
-
   console.log(`Ready!`);
 });
 
