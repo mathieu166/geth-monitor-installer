@@ -105,6 +105,7 @@ async function sendDiscordMessage(userId, title, description, color, fields) {
                 "Your node has not validated a block in over 45 minutes. Please check your node.",
                 0xff0000, // Red color for alert
                 [
+                  { name: "Validator Address", value: address, inline: false },
                   { name: "Last Block Number", value: `#${block_number}`, inline: true },
                   { name: "Time Since Last Block", value: `${minutesSinceLastBlock} minutes`, inline: true },
                   { name: "Last Block Timestamp", value: new Date(last_block_timestamp * 1000).toISOString(), inline: false }
@@ -123,6 +124,7 @@ async function sendDiscordMessage(userId, title, description, color, fields) {
                 "Your node is now validating blocks again. Everything is back on track.",
                 0x00ff00, // Green color for recovery
                 [
+                  { name: "Validator Address", value: address, inline: false },
                   { name: "Last Block Number", value: `#${block_number}`, inline: true },
                   { name: "Time Since Last Block", value: `${minutesSinceLastBlock} minutes`, inline: true },
                   { name: "Last Block Timestamp", value: new Date(last_block_timestamp * 1000).toISOString(), inline: false }
