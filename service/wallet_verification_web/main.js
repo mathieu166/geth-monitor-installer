@@ -632,7 +632,7 @@ async function refreshContributionSpecs() {
       
       const additionalInfo = document.createElement("p");
       additionalInfo.id = "additionalInfo";
-      additionalInfo.textContent = "After the transaction completes, the transaction hash will be copied bellow for you to Submit";
+      additionalInfo.textContent = "After the transaction completes, the transaction hash will be copied bellow and automatically processed.";
       automatedCard.appendChild(additionalInfo);
 
       // Create USDC balance element
@@ -987,7 +987,17 @@ async function sendContribution(chain, recipient, contributionValue) {
     web3.eth
       .sendTransaction(tx)
       .on("transactionHash", function (hash) {
+        const txhashInput = document.getElementById("tx-hash-input");
+        const submitBtn = document.getElementById("btn-submit-tx");
+        
         txHashInput.value = hash;
+        txhashInput.disabled = true;
+        submitBtn.disabled = true;
+
+        showSuccessToast("Hang Tight! Transaction is being processed");
+
+        setTimeout(onSubmitTransaction, 2000);
+
       })
       .on("receipt", function (receipt) {
         console.log("receipt", receipt);
