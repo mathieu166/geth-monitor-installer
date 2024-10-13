@@ -171,14 +171,15 @@ const refreshVerifiedWallets = async (retries = 3, delay = 500) => {
     // Select the template and the container for the verified wallets
     const template = document.querySelector("#template-verified-wallet");
     const walletsContainer = document.querySelector("#wallets");
+    // Clear any previously loaded wallets
+    walletsContainer.innerHTML = "";
 
     const templateDiscordAlerts = document.querySelector(
       "#template-discord-alerts"
     );
     const discordAlertsContainer = document.querySelector("#discord-alerts");
+    discordAlertsContainer.innerHTML = "";
 
-    // Clear any previously loaded wallets
-    walletsContainer.innerHTML = "";
 
     // If no wallets are found, show a message or leave the table empty
     if (
