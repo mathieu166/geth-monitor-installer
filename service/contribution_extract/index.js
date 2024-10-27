@@ -50,7 +50,12 @@ async function checkPendingTransactions() {
                             [from.toLowerCase(), discord_username]
                         );
 
-                        if (verifiedRes.rows.length > 0) {
+                        const verifiedValidatorRes = await client.query(
+                            'SELECT * FROM validator WHERE address = $1 AND discord_username = $2',
+                            [from.toLowerCase(), discord_username]
+                        );
+
+                        if (verifiedRes.rows.length > 0 || verifiedValidatorRes.rows.length > 0) {
                             // Step 5: Get the transaction date from the block timestamp
                             const txDate = await getTransactionDate(chain.rpcUrl, blockNumber);
 
